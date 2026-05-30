@@ -1,0 +1,43 @@
+# macOS and editor state
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Local Codex and CodeGraph state
+.codex/
+.codegraph/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+*.dylib
+*.dll
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Rust
+target/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Generated project outputs
+valsoft/output/

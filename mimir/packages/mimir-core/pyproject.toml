@@ -1,0 +1,19 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "mimir-core"
+version = "0.1.0"
+description = "Rust-backed Python primitives for Mimir transaction intelligence."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "maturin>=1.7,<2"]
+
+[tool.maturin]
+features = ["extension-module"]
+module-name = "mimir_core._native"
+python-source = "python"

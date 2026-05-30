@@ -1,0 +1,22 @@
+[package]
+name = "mimir-core"
+version = "0.1.0"
+edition = "2021"
+description = "Rust primitives for Mimir transaction intelligence."
+license = "Apache-2.0"
+
+[lib]
+name = "mimir_core_native"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+pyo3 = { version = "0.23", features = ["abi3-py311"] }
+rand = { version = "0.8", features = ["std_rng"] }
+
+[dev-dependencies]
+tempfile = "3"

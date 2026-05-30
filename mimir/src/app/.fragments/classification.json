@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "fragments-classification:v1",
+  "generatedAt": "2026-05-30T18:30:04.535Z",
+  "classifierVersion": "fragments_cli_classifier_v1",
+  "vocabVersion": "vocab_v0",
+  "root": "/Users/andrewkoumoudjian/Desktop/Analytics/mpc-hacks/mimir/src",
+  "ai": {
+    "provider": "none",
+    "model": null,
+    "classified": 0,
+    "skippedReason": "Set ANTHROPIC_API_KEY or OPENAI_API_KEY and re-run `fragments classify` for AI semantic classification."
+  },
+  "components": [
+    {
+      "id": "e996f3cf2ef592e0",
+      "filePath": "src/components/Button/Button.tsx",
+      "componentName": "Button",
+      "canonical": "Button",
+      "confidence": 0.742875,
+      "rawConfidence": 0.742875,
+      "band": "suggested",
+      "reviewed": false,
+      "targetLoc": {
+        "file": "/Users/andrewkoumoudjian/Desktop/Analytics/mpc-hacks/mimir/src/src/components/Button/Button.tsx",
+        "line": 38,
+        "column": 4,
+        "endLine": 42,
+        "endColumn": 5
+      },
+      "alternates": [],
+      "signals": [
+        {
+          "type": "HTML_ROOT",
+          "canonical": "Button",
+          "weight": 0.45,
+          "evidence": {
+            "tag": "button",
+            "hitBranches": 1,
+            "totalBranches": 1
+          }
+        },
+        {
+          "type": "PROP_FINGERPRINT",
+          "canonical": "Button",
+          "weight": 0.45,
+          "evidence": {
+            "requiredHits": [
+              "onClick",
+              "children"
+            ],
+            "optionalHits": [
+              "variant",
+              "size",
+              "disabled"
+            ],
+            "antiHits": [],
+            "polymorphic": false
+          }
+        },
+        {
+          "type": "NAME_MATCH",
+          "canonical": "Button",
+          "weight": 0.15,
+          "evidence": {
+            "componentName": "Button",
+            "stripped": "Button"
+          }
+        }
+      ]
+    }
+  ]
+}
