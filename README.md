@@ -29,6 +29,7 @@ See `mimir/README.md` for the fraud engine details, reviewer commands, API endpo
 
 - `mimir/packages/mimir-fraud`: Python fraud and transaction risk engine.
 - `mimir/packages/mimir-core`: Rust-backed shared primitives exposed to Python.
+- `mimir/packages/xfraud-ml`: pure-Rust xFraud-style ML and detector training stack.
 - `mimir/packages/synthetic-pipeline`: Rust-backed synthetic transaction generation experiments.
 - `mimir/packages/data-primitives`: reserved for ingestion and normalization primitives.
 

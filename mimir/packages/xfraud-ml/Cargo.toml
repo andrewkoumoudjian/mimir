@@ -1,0 +1,19 @@
+[package]
+name = "xfraud-ml"
+version = "0.1.0"
+edition = "2021"
+description = "Pure-Rust xFraud-style ML and training stack for Mimir."
+license = "Apache-2.0"
+
+[lib]
+name = "xfraud_ml_native"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["abi3-py311"] }
+rand = { version = "0.8", features = ["std_rng"] }
+

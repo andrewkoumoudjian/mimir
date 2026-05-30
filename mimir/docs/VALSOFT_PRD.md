@@ -25,4 +25,4 @@ The reviewer has 1,000 card transactions with hidden fraud across multiple behav
 
 ## Reviewer Workflow
 
-The reviewer opens the queue sorted by risk score. Each queue item includes the transaction, risk level, primary fraud pattern, component scores, and top reasons. They can approve, dismiss, or escalate. Undo restores the prior status. Dismissals are written to the audit log and can suppress similar future pending items inside the same session.
+The reviewer opens the dashboard queue sorted by risk score. Each queue item includes the transaction, risk level, primary fraud pattern, component scores, and top reasons. They can approve, dismiss, or escalate from the detail panel, or use keyboard actions (`A`, `D`, `E`, `U`) to review quickly. Undo restores the prior status. Dismissals are written to the audit log and can suppress similar future pending items inside the same session.

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "xfraud-ml"
+version = "0.1.0"
+description = "Pure-Rust xFraud-style ML and training stack for Mimir."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "maturin>=1.7,<2"]
+
+[tool.maturin]
+features = ["extension-module"]
+module-name = "xfraud_ml._native"
+python-source = "python"
+
