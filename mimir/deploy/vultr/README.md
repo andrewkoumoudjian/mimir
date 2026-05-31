@@ -1,6 +1,6 @@
 # Vultr deployment
 
-The GitHub Actions workflow at `.github/workflows/deploy-vultr.yml` builds the dashboard Docker image on every push to `main`, uploads it to the Vultr instance, and replaces the running container.
+The GitHub Actions workflow at `.github/workflows/deploy-vultr.yml` syncs the `mimir/` source tree to the Vultr instance on every push to `main`, builds the dashboard Docker image on the Vultr instance, and replaces the running container.
 
 Required GitHub secret:
 
@@ -22,3 +22,5 @@ Useful GitHub variables:
 - `NEXT_PUBLIC_API_URL`: defaults to `http://216.128.154.247`.
 
 The server-side deploy script creates `/opt/mimir/dashboard.env` with minimal placeholder values if the file does not already exist. That is enough to start the container, but production integrations need real values.
+
+The remote source lives at `/opt/mimir-src`. The deployed container is `mimir-dashboard`, bound to host port `80`.
