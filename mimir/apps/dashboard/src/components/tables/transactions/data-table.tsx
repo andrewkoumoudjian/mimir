@@ -204,24 +204,6 @@ export function DataTable({ initialSettings, initialTab }: Props) {
 		}),
 	);
 
-	const undoReviewMutation = useMutation(
-		trpc.review.undo.mutationOptions({
-			onSuccess: () => {
-				queryClient.invalidateQueries({
-					queryKey: trpc.transactions.get.infiniteQueryKey(),
-				});
-				queryClient.invalidateQueries({
-					queryKey: trpc.transactions.getReviewCount.queryKey(),
-				});
-
-				toast({
-					title: "Last review action undone",
-					variant: "success",
-				});
-			},
-		}),
-	);
-
 	const deleteTransactionMutation = useMutation(
 		trpc.transactions.deleteMany.mutationOptions({
 			onSuccess: () => {
@@ -525,6 +507,8 @@ export function DataTable({ initialSettings, initialTab }: Props) {
 	});
 
 	useEffect(() => {
+		// Column visibility changes should resync the stored column model.
+		void columnVisibility;
 		setColumns(table.getAllLeafColumns());
 	}, [columnVisibility, setColumns, table]);
 
@@ -567,52 +551,6 @@ export function DataTable({ initialSettings, initialTab }: Props) {
 				if (nextId) {
 					setParams({ transactionId: nextId });
 				}
-			}
-		},
-		{ enabled: !!transactionId },
-	);
-
-	const applyReviewAction = useCallback(
-		(action: "approve" | "dismiss" | "escalate") => {
-			if (!transactionId) return;
-
-			const currentIndex = ids.indexOf(transactionId);
-			const adjacentId =
-				currentIndex !== -1
-					? (ids[currentIndex + 1] ?? ids[currentIndex - 1])
-					: undefined;
-
-			updateTransactionMutation.mutate(
-				{
-					id: transactionId,
-					action,
-				} as any,
-				{
-					onSuccess: () => {
-						setParams(adjacentId ? { transactionId: adjacentId } : null);
-					},
-				},
-			);
-		},
-		[ids, setParams, transactionId, updateTransactionMutation],
-	);
-
-	useHotkeys(
-		"a,d,e,u,enter",
-		(event) => {
-			if (!transactionId) return;
-			event.preventDefault();
-
-			if (event.key === "a") {
-				applyReviewAction("approve");
-			} else if (event.key === "d") {
-				applyReviewAction("dismiss");
-			} else if (event.key === "e") {
-				applyReviewAction("escalate");
-			} else if (event.key === "u") {
-				undoReviewMutation.mutate(undefined);
-			} else if (event.key === "Enter") {
-				setParams(null);
 			}
 		},
 		{ enabled: !!transactionId },

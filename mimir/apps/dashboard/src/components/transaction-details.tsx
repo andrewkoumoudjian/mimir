@@ -24,6 +24,7 @@ import { toast } from "@midday/ui/use-toast";
 import { useOpenPanel } from "@openpanel/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
+import { useEffect, useRef } from "react";
 import { useInvalidateTransactionQueries } from "@/hooks/use-invalidate-transaction-queries";
 import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useUpdateTransactionCategory } from "@/hooks/use-update-transaction-category";
@@ -44,6 +45,12 @@ export function TransactionDetails() {
 	const queryClient = useQueryClient();
 	const { track } = useOpenPanel();
 	const invalidateTransactionQueries = useInvalidateTransactionQueries();
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!transactionId) return;
+		scrollContainerRef.current?.scrollTo({ top: 0, left: 0 });
+	}, [transactionId]);
 
 	const { updateCategory } = useUpdateTransactionCategory({
 		onSuccess: () => {
@@ -238,7 +245,10 @@ export function TransactionDetails() {
 
 	if (isLoading || !data) {
 		return (
-			<div className="h-[calc(100vh-80px)] scrollbar-hide overflow-auto pb-12">
+			<div
+				ref={scrollContainerRef}
+				className="h-[calc(100vh-80px)] scrollbar-hide overflow-auto pb-28"
+			>
 				<div className="flex justify-between mb-8">
 					<div className="flex-1 flex-col">
 						<div className="flex items-center justify-between">
@@ -292,7 +302,10 @@ export function TransactionDetails() {
 	}
 
 	return (
-		<div className="h-[calc(100vh-80px)] scrollbar-hide overflow-auto pb-12">
+		<div
+			ref={scrollContainerRef}
+			className="h-[calc(100vh-80px)] scrollbar-hide overflow-auto pb-28"
+		>
 			<div className="flex justify-between mb-8">
 				<div className="flex-1 flex-col">
 					{isLoading ? (
@@ -623,6 +636,7 @@ export function TransactionDetails() {
 
 			<TransactionShortcuts
 				isFulfilled={data?.isFulfilled ?? false}
+				reviewStatus={data?.reviewStatus}
 				status={data?.status ?? ""}
 			/>
 		</div>
