@@ -18,8 +18,8 @@ Mimir currently ships a Valsoft-focused fraud workflow:
 - Builds per-card behavior baselines and cross-card aggregate signals
 - Scores every transaction with a normalized risk score, level, primary pattern, and reason codes
 - Flags the balanced top 8% review queue by default, currently 80 transactions
-- Writes `valsoft/output/transactions_with_mimir_risk.csv` with Mimir risk columns added
-- Writes `risk_results.json`, `review_queue.json`, `review_state.json`, and `audit_log.jsonl`
+- Writes `valsoft/output/transactions_with_mimir_risk.csv` with fraud and Mimir risk columns added
+- Writes `identified_fraud_transactions.csv`, `risk_results.json`, `review_queue.json`, `review_state.json`, and `audit_log.jsonl`
 - Serves a local reviewer API for the dashboard and CLI
 - Supports approve, dismiss, escalate, decline, block, and undo decisions
 - Exposes card, merchant, device, IP, category-country cluster, timeline, and graph context
@@ -27,9 +27,10 @@ Mimir currently ships a Valsoft-focused fraud workflow:
 The active challenge docs are:
 
 - [Mimir challenge README](mimir/README.md)
-- [Valsoft PRD](mimir/docs/VALSOFT_PRD.md)
-- [Implementation plan](mimir/docs/IMPLEMENTATION_PLAN.md)
-- [Hypothesis log](mimir/docs/HYPOTHESIS_LOG.md)
+- [Valsoft docs index](valsoft/docs/README.md)
+- [Valsoft PRD](valsoft/docs/VALSOFT_PRD.md)
+- [Implementation plan](valsoft/docs/IMPLEMENTATION_PLAN.md)
+- [Hypothesis log](valsoft/docs/HYPOTHESIS_LOG.md)
 
 ## How we built it
 
@@ -62,7 +63,7 @@ The reviewer experience forced tradeoffs. A giant table is easy to build but wea
 
 ## Draft
 
-The current demo run is reproducible from a clean local environment with Python 3.12, `uv`, `maturin`, and Bun. The balanced profile processes 1,000 transactions, flags 80, and writes the required updated transaction file to `valsoft/output/transactions_with_mimir_risk.csv`.
+The current demo run is reproducible from a clean local environment with Python 3.12, `uv`, `maturin`, and Bun. The balanced profile processes 1,000 transactions, flags 80, writes the required updated transaction file to `valsoft/output/transactions_with_mimir_risk.csv`, and writes the fraud ID list to `valsoft/output/identified_fraud_transactions.csv`.
 
 Run the detector from the repository root:
 
@@ -107,6 +108,5 @@ Next, Mimir should persist reviewer decisions in SQLite or Postgres, tune thresh
 ## Repository layout
 
 - `mimir/`: main application, dashboard, Python fraud package, and reusable packages
-- `valsoft/`: challenge brief, dataset, and generated output artifacts
+- `valsoft/`: consolidated challenge docs, dataset, and generated output artifacts
 - `ref/`: reference implementations, research notes, and comparison material
-- `mimir/docs/`: challenge PRD, implementation plan, and hypothesis log

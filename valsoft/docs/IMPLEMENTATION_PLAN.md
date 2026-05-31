@@ -92,6 +92,8 @@ Review state is file-backed for the challenge:
 | --- | --- |
 | `review_state.json` | Current status and undo stack |
 | `audit_log.jsonl` | Append-only reviewer receipts |
+| `transactions_with_mimir_risk.csv` | All original transactions with explicit fraud flag, pattern, reasons, and Mimir risk columns |
+| `identified_fraud_transactions.csv` | Flagged transaction ID list with fraud pattern and reason codes |
 | `review_queue.json` | Pending flagged rows for UI and demo |
 | `risk_results.json` | Full summary plus all risk objects |
 

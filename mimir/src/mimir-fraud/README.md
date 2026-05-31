@@ -77,6 +77,7 @@ Reasons are deterministic and evidence-backed so the reviewer sees why a transac
 `score` writes:
 
 - `valsoft/output/transactions_with_mimir_risk.csv`
+- `valsoft/output/identified_fraud_transactions.csv`
 - `valsoft/output/risk_results.json`
 - `valsoft/output/review_queue.json`
 
@@ -96,6 +97,7 @@ The tests cover a known high-risk gift-card flag, a known low-risk restaurant ro
 ## Related docs
 
 - [Challenge README](../../README.md)
-- [Valsoft PRD](../../docs/VALSOFT_PRD.md)
-- [Implementation plan](../../docs/IMPLEMENTATION_PLAN.md)
-- [Hypothesis log](../../docs/HYPOTHESIS_LOG.md)
+- [Valsoft docs index](../../../valsoft/docs/README.md)
+- [Valsoft PRD](../../../valsoft/docs/VALSOFT_PRD.md)
+- [Implementation plan](../../../valsoft/docs/IMPLEMENTATION_PLAN.md)
+- [Hypothesis log](../../../valsoft/docs/HYPOTHESIS_LOG.md)

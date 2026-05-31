@@ -26,7 +26,7 @@ The product problem is not just "rank rows by anomaly." The reviewer needs a sho
 | Reviewer speed | Reviewer can move through pending flags with keyboard navigation and one-key actions |
 | Stateful decisions | Approve, dismiss, escalate, decline, block, and undo update local state |
 | Auditability | Every reviewer action writes a JSONL audit receipt |
-| Challenge export | Updated CSV includes original rows plus Mimir risk and review columns |
+| Challenge export | Updated CSV includes original rows plus explicit fraud flag, pattern, reasons, Mimir risk, and review columns |
 | Context | Transaction detail includes card, merchant, device, IP, category-country cluster, timeline, and graph links |
 | Reproducibility | One scoring command regenerates CSV and JSON outputs |
 | Engineering proof | Tests cover known suspicious and known legitimate cases plus review state behavior |
@@ -48,7 +48,7 @@ The product problem is not just "rank rows by anomaly." The reviewer needs a sho
 4. The reviewer presses `A` to approve, `D` to dismiss, `E` to escalate, or uses the CLI/API equivalents.
 5. Mimir records the decision in `review_state.json` and writes an audit event to `audit_log.jsonl`.
 6. The reviewer can press `U` or call `undo` to reverse the last decision.
-7. The updated CSV keeps review status beside the risk signals for handoff.
+7. The updated CSV keeps review status beside the risk signals for handoff, and the fraud ID list gives the final flagged set with explaining patterns.
 
 ## User experience requirements
 

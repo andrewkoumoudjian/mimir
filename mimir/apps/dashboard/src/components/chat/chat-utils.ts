@@ -91,6 +91,7 @@ export const TOOL_LABELS: Record<string, string> = {
   reports_balance_sheet: "Generating balance sheet",
   reports_profit_loss: "Generating profit & loss report",
   reports_expense: "Analyzing expenses",
+  inbox_live_feed: "Reading live fraud feed",
 
   // Time tracking
   tracker_projects_list: "Looking up projects",

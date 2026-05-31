@@ -12,11 +12,11 @@ Mimir is the Valsoft Fraud Hunter implementation for a broader transaction intel
 | Flag suspicious transactions | Balanced mode flags the top 8% review queue, currently 80 transactions |
 | Explain every flag | Each `TransactionRisk` includes up to five ordered reasons with exact evidence |
 | Support a reviewer | CLI and dashboard support queue navigation, approve, dismiss, escalate, and undo |
-| Updated transaction file | `valsoft/output/transactions_with_mimir_risk.csv` appends risk, flag, pattern, reason, xFraud, and review columns |
+| Updated transaction file | `valsoft/output/transactions_with_mimir_risk.csv` appends explicit fraud flag, pattern, reason, risk, xFraud, and review columns |
 | README | This file explains setup, run path, detection strategy, outputs, tests, and next work |
-| PRD | [VALSOFT_PRD.md](docs/VALSOFT_PRD.md) defines user, problem, success, and non-goals |
-| Implementation plan | [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) defines architecture, tech choices, and skipped work |
-| Bonus hypothesis log | [HYPOTHESIS_LOG.md](docs/HYPOTHESIS_LOG.md) records the fraud hypotheses and decisions |
+| PRD | [VALSOFT_PRD.md](../valsoft/docs/VALSOFT_PRD.md) defines user, problem, success, and non-goals |
+| Implementation plan | [IMPLEMENTATION_PLAN.md](../valsoft/docs/IMPLEMENTATION_PLAN.md) defines architecture, tech choices, and skipped work |
+| Bonus hypothesis log | [HYPOTHESIS_LOG.md](../valsoft/docs/HYPOTHESIS_LOG.md) records the fraud hypotheses and decisions |
 
 ## Setup
 
@@ -69,6 +69,7 @@ Primary flagged patterns in the current run:
 The scoring command writes:
 
 - `valsoft/output/transactions_with_mimir_risk.csv`
+- `valsoft/output/identified_fraud_transactions.csv`
 - `valsoft/output/risk_results.json`
 - `valsoft/output/review_queue.json`
 - `valsoft/output/review_state.json` after reviewer actions
@@ -79,6 +80,9 @@ The updated CSV keeps the original rows and appends:
 - `mimir_risk_score`
 - `mimir_risk_level`
 - `mimir_is_flagged`
+- `identified_fraud`
+- `fraud_pattern`
+- `fraud_reason_codes`
 - `mimir_xfraud_graph_score`
 - `mimir_recommended_action`
 - `mimir_primary_pattern`

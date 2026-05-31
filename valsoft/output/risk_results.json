@@ -131,22 +131,22 @@
           "cards": 50,
           "merchants": 41,
           "categories": {
-            "entertainment": 26,
-            "travel": 1,
             "gas": 88,
-            "gift_card": 7,
-            "grocery": 135,
-            "subscription": 80,
             "restaurant": 230,
-            "utilities": 66,
-            "atm": 79,
+            "subscription": 80,
+            "travel": 1,
+            "entertainment": 26,
             "online_retail": 280,
-            "electronics": 8
+            "electronics": 8,
+            "gift_card": 7,
+            "atm": 79,
+            "utilities": 66,
+            "grocery": 135
           },
           "channels": {
-            "atm": 79,
+            "in_person": 484,
             "online": 437,
-            "in_person": 484
+            "atm": 79
           },
           "min_timestamp": "2026-04-25T00:27:09",
           "max_timestamp": "2026-05-24T22:48:39"
@@ -155,6 +155,7 @@
     },
     "output_files": {
       "updated_csv": "valsoft/output/transactions_with_mimir_risk.csv",
+      "identified_fraud_csv": "valsoft/output/identified_fraud_transactions.csv",
       "review_queue_json": "valsoft/output/review_queue.json",
       "risk_json": "valsoft/output/risk_results.json"
     }

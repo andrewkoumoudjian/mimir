@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import csv
 from pathlib import Path
 
 import pytest
 
-from mimir.engine import run_fraud_engine
+from mimir.data.load_transactions import load_transactions
+from mimir.engine import run_fraud_engine, write_engine_outputs
 from mimir.context import build_transaction_context
 from mimir.review.audit_log import read_audit_events
 from mimir.review.review_state import ReviewState
@@ -39,6 +41,26 @@ def test_known_low_risk_restaurant_transaction_is_not_flagged(engine_result):
 
     assert risk.is_flagged is False
     assert risk.risk_score < engine_result.summary.threshold
+
+
+def test_export_files_include_identified_fraud_list(engine_result, tmp_path):
+    files = write_engine_outputs(load_transactions(TRANSACTIONS), engine_result, tmp_path)
+
+    with files["updated_csv"].open(newline="") as file:
+        updated_reader = csv.DictReader(file)
+        assert updated_reader.fieldnames is not None
+        assert "identified_fraud" in updated_reader.fieldnames
+        assert "fraud_pattern" in updated_reader.fieldnames
+        assert "fraud_reason_codes" in updated_reader.fieldnames
+
+    with files["identified_fraud_csv"].open(newline="") as file:
+        fraud_rows = list(csv.DictReader(file))
+
+    assert len(fraud_rows) == engine_result.summary.flagged_rows
+    known_row = next(row for row in fraud_rows if row["transaction_id"] == "tx_000985")
+    assert known_row["identified_fraud"] == "true"
+    assert known_row["fraud_pattern"] == "account_takeover_purchase"
+    assert "HIGH_RISK_CATEGORY_AMOUNT" in known_row["reason_codes"]
 
 
 def test_xfraud_score_and_transaction_context_are_available(engine_result):

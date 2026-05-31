@@ -9,6 +9,7 @@ Required GitHub secret:
 Recommended GitHub secrets:
 
 - `DASHBOARD_ENV_FILE`: full runtime env file written to `/opt/mimir/dashboard.env`.
+- `OPENROUTER_API_KEY`: OpenRouter key for the dashboard chat API.
 - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`: stable base64-encoded 32-byte key.
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`

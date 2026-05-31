@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { LogEvents } from "@midday/events/events";
 import { useOpenPanel } from "@openpanel/nextjs";
-import { DefaultChatTransport } from "ai";
+import type { UIMessage } from "ai";
 import type { ReactNode } from "react";
 import {
   createContext,
@@ -13,7 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { getAccessToken } from "@/utils/session";
+import { createChatTransport } from "./chat-transport";
 
 export type RateLimitInfo = { limit: number; remaining: number };
 
@@ -23,7 +23,7 @@ export type ConnectedApp = {
   logo: string | null;
 };
 
-export type ChatState = ReturnType<typeof useChat> & {
+export type ChatState = ReturnType<typeof useChat<UIMessage>> & {
   inputValue: string;
   setInputValue: (v: string) => void;
   chatTitle: string | null;
@@ -72,38 +72,29 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const chatTransport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: `${process.env.NEXT_PUBLIC_API_URL}/chat`,
-        headers: async () => {
-          const token = await getAccessToken();
-          const timezone =
-            Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
-          return {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            "x-user-timezone": timezone,
-          } as Record<string, string>;
-        },
-        body: () => ({
-          mentionedApps: mentionedAppsRef.current.map((a) => ({
-            slug: a.slug,
-            name: a.name,
-          })),
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC",
-          localTime: new Date().toISOString(),
-        }),
-      }),
+    () => createChatTransport(() => mentionedAppsRef.current),
     [],
   );
 
   const chat = useChat({
     transport: chatTransport,
-    onData: (part: any) => {
-      if (part.type === "data-title" && part.data?.title) {
-        setChatTitle(part.data.title);
+    onData: (part: unknown) => {
+      if (!part || typeof part !== "object") return;
+      const dataPart = part as { type?: string; data?: unknown };
+      const data =
+        dataPart.data && typeof dataPart.data === "object"
+          ? (dataPart.data as Record<string, unknown>)
+          : null;
+
+      if (dataPart.type === "data-title" && typeof data?.title === "string") {
+        setChatTitle(data.title);
       }
-      if (part.type === "data-rate-limit" && part.data) {
-        setRateLimit(part.data as RateLimitInfo);
+      if (
+        dataPart.type === "data-rate-limit" &&
+        typeof data?.limit === "number" &&
+        typeof data.remaining === "number"
+      ) {
+        setRateLimit({ limit: data.limit, remaining: data.remaining });
         setRateLimitExceeded(false);
       }
     },
@@ -118,7 +109,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const trackedSendMessage: typeof chat.sendMessage = useCallback(
     (...args) => {
-      track(LogEvents.AssistantMessageSent.name);
+      if (LogEvents.AssistantMessageSent) {
+        track(LogEvents.AssistantMessageSent.name);
+      }
       return chat.sendMessage(...args);
     },
     [chat.sendMessage, track],

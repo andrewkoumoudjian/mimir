@@ -7,7 +7,7 @@ from pathlib import Path
 from mimir.core.paths import DEFAULT_OUTPUT_DIR, DEFAULT_TRANSACTION_CSV, ensure_output_dir
 from mimir.core.schemas import EngineSummary
 from mimir.data.load_transactions import load_transactions
-from mimir.export.export_csv import export_flagged_csv
+from mimir.export.export_csv import export_flagged_csv, export_identified_fraud_csv
 from mimir.export.export_json import export_review_queue_json, export_risk_json
 from mimir.features.feature_pipeline import build_feature_frame
 from mimir.primitives import primitive_runtime_status, xfraud_graph_probe
@@ -95,6 +95,11 @@ def write_engine_outputs(
             result.risks,
             output_path / "transactions_with_mimir_risk.csv",
         ),
+        "identified_fraud_csv": export_identified_fraud_csv(
+            transactions,
+            result.risks,
+            output_path / "identified_fraud_transactions.csv",
+        ),
         "review_queue_json": export_review_queue_json(
             result.risks,
             output_path / "review_queue.json",
@@ -104,6 +109,7 @@ def write_engine_outputs(
     result.summary.output_files.update(
         {
             "updated_csv": str(files["updated_csv"]),
+            "identified_fraud_csv": str(files["identified_fraud_csv"]),
             "review_queue_json": str(files["review_queue_json"]),
             "risk_json": str(risk_json_path),
         }

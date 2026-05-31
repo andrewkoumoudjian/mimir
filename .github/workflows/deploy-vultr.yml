@@ -68,14 +68,31 @@ jobs:
       - name: Upload runtime env from secret
         env:
           DASHBOARD_ENV_FILE: ${{ secrets.DASHBOARD_ENV_FILE }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          if [ -z "$DASHBOARD_ENV_FILE" ]; then
+          if [ -n "$DASHBOARD_ENV_FILE" ]; then
+            printf '%s\n' "$DASHBOARD_ENV_FILE" > /tmp/dashboard.env
+            scp -i ~/.ssh/vultr_deploy_key /tmp/dashboard.env "$VULTR_USER@$VULTR_HOST:/tmp/dashboard.env"
+            ssh -i ~/.ssh/vultr_deploy_key "$VULTR_USER@$VULTR_HOST" 'mkdir -p /opt/mimir && install -m 600 /tmp/dashboard.env /opt/mimir/dashboard.env'
+          else
             echo "DASHBOARD_ENV_FILE not configured; server will keep or create /opt/mimir/dashboard.env"
-            exit 0
           fi
-          printf '%s\n' "$DASHBOARD_ENV_FILE" > /tmp/dashboard.env
-          scp -i ~/.ssh/vultr_deploy_key /tmp/dashboard.env "$VULTR_USER@$VULTR_HOST:/tmp/dashboard.env"
-          ssh -i ~/.ssh/vultr_deploy_key "$VULTR_USER@$VULTR_HOST" 'mkdir -p /opt/mimir && install -m 600 /tmp/dashboard.env /opt/mimir/dashboard.env'
+
+          if [ -n "$OPENROUTER_API_KEY" ]; then
+            printf 'OPENROUTER_API_KEY=%s\n' "$OPENROUTER_API_KEY" > /tmp/openrouter.env
+            scp -i ~/.ssh/vultr_deploy_key /tmp/openrouter.env "$VULTR_USER@$VULTR_HOST:/tmp/openrouter.env"
+            ssh -i ~/.ssh/vultr_deploy_key "$VULTR_USER@$VULTR_HOST" '
+              mkdir -p /opt/mimir
+              touch /opt/mimir/dashboard.env
+              chmod 600 /opt/mimir/dashboard.env
+              grep -v "^OPENROUTER_API_KEY=" /opt/mimir/dashboard.env > /tmp/dashboard.env.without_openrouter || true
+              cat /tmp/dashboard.env.without_openrouter /tmp/openrouter.env > /tmp/dashboard.env.new
+              install -m 600 /tmp/dashboard.env.new /opt/mimir/dashboard.env
+              rm -f /tmp/openrouter.env /tmp/dashboard.env.without_openrouter /tmp/dashboard.env.new
+            '
+          else
+            echo "OPENROUTER_API_KEY not configured; chatbot API will return a configuration error"
+          fi
 
       - name: Remote build and deploy on Vultr
         env:

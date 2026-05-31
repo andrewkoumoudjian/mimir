@@ -1,9 +1,8 @@
 import { Chat } from "@ai-sdk/react";
 import type { FileUIPart, UIMessage } from "ai";
-import { DefaultChatTransport } from "ai";
 import { nanoid } from "nanoid";
 import { create } from "zustand";
-import { getAccessToken } from "@/utils/session";
+import { createChatTransport } from "@/components/chat/chat-transport";
 
 export type RateLimitInfo = { limit: number; remaining: number };
 
@@ -34,37 +33,33 @@ interface ChatStoreState {
   stop: () => void;
 }
 
-const chatTransport = new DefaultChatTransport({
-  api: `${process.env.NEXT_PUBLIC_API_URL}/chat`,
-  headers: async () => {
-    const token = await getAccessToken();
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
-    return {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "x-user-timezone": timezone,
-    } as Record<string, string>;
-  },
-  body: () => ({
-    mentionedApps: useChatStore
-      .getState()
-      .mentionedApps.map((a) => ({ slug: a.slug, name: a.name })),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC",
-    localTime: new Date().toISOString(),
-  }),
-});
+const chatTransport = createChatTransport(
+  () => useChatStore.getState().mentionedApps,
+);
 
 function createChat(id: string): Chat<UIMessage> {
   return new Chat({
     id,
     generateId: nanoid,
     transport: chatTransport,
-    onData: (part: any) => {
-      if (part.type === "data-title" && part.data?.title) {
-        useChatStore.setState({ chatTitle: part.data.title });
+    onData: (part: unknown) => {
+      if (!part || typeof part !== "object") return;
+      const dataPart = part as { type?: string; data?: unknown };
+      const data =
+        dataPart.data && typeof dataPart.data === "object"
+          ? (dataPart.data as Record<string, unknown>)
+          : null;
+
+      if (dataPart.type === "data-title" && typeof data?.title === "string") {
+        useChatStore.setState({ chatTitle: data.title });
       }
-      if (part.type === "data-rate-limit" && part.data) {
+      if (
+        dataPart.type === "data-rate-limit" &&
+        typeof data?.limit === "number" &&
+        typeof data.remaining === "number"
+      ) {
         useChatStore.setState({
-          rateLimit: part.data as RateLimitInfo,
+          rateLimit: { limit: data.limit, remaining: data.remaining },
           rateLimitExceeded: false,
         });
       }

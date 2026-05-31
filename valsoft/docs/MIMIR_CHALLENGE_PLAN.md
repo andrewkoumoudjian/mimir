@@ -295,7 +295,7 @@ Do NOT fully build Brim in this task, but prepare clean hooks:
 - expense_report_group_id can be added later
 - natural-language query layer can call precomputed aggregates and return JSON visualization specs
 
-Add a short docs/BRIM_EXTENSION_PLAN.md explaining:
+Add a short `valsoft/docs/BRIM_EXTENSION_PLAN.md` explaining:
 - how policy rules will attach to TransactionRisk
 - how approval recommendations reuse the reason engine
 - how expense reports group transactions
@@ -312,10 +312,10 @@ Add tests with small synthetic data:
 15. Documentation:
 Update/create:
 README.md
-docs/PRD.md
-docs/IMPLEMENTATION_PLAN.md
-docs/HYPOTHESIS_LOG.md
-docs/BRIM_EXTENSION_PLAN.md
+valsoft/docs/VALSOFT_PRD.md
+valsoft/docs/IMPLEMENTATION_PLAN.md
+valsoft/docs/HYPOTHESIS_LOG.md
+valsoft/docs/BRIM_EXTENSION_PLAN.md
 
 README must include:
 - what Mimir is
