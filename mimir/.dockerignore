@@ -22,3 +22,10 @@ dist
 build
 coverage
 *.log
+target
+**/target
+__pycache__
+**/__pycache__
+.pytest_cache
+**/.pytest_cache
+valsoft/output

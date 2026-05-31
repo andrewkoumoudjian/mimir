@@ -5,12 +5,17 @@ SRC_DIR="${SRC_DIR:-/opt/mimir-src}"
 APP_DIR="${APP_DIR:-/opt/mimir}"
 CONTAINER_NAME="${CONTAINER_NAME:-mimir-dashboard}"
 IMAGE_TAG="${IMAGE_TAG:-mimir-dashboard:${GITHUB_SHA:-remote}}"
+API_CONTAINER_NAME="${API_CONTAINER_NAME:-mimir-api}"
+API_IMAGE_TAG="${API_IMAGE_TAG:-mimir-api:${GITHUB_SHA:-remote}}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/dashboard.env}"
+VALSOFT_DIR="${VALSOFT_DIR:-$APP_DIR/valsoft}"
 PUBLIC_PORT="${PUBLIC_PORT:-80}"
 INTERNAL_PORT="${INTERNAL_PORT:-3000}"
+API_PUBLIC_PORT="${API_PUBLIC_PORT:-8787}"
+API_INTERNAL_PORT="${API_INTERNAL_PORT:-8787}"
 PUBLIC_URL="${PUBLIC_URL:-http://173.199.93.71}"
 API_URL="${API_URL:-$PUBLIC_URL}"
-MIMIR_API_URL="${MIMIR_API_URL:-$API_URL}"
+MIMIR_API_URL="${MIMIR_API_URL:-http://173.199.93.71:8787}"
 NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-$(openssl rand -base64 32)}"
 
 log() {
@@ -43,13 +48,10 @@ ensure_docker_running() {
 }
 
 write_default_env() {
-  if [ -f "$ENV_FILE" ]; then
-    return
-  fi
-
-  log "Creating default runtime env at $ENV_FILE"
-  mkdir -p "$APP_DIR"
-  cat >"$ENV_FILE" <<ENV
+  mkdir -p "$APP_DIR" "$VALSOFT_DIR/data" "$VALSOFT_DIR/output"
+  if [ ! -f "$ENV_FILE" ]; then
+    log "Creating default runtime env at $ENV_FILE"
+    cat >"$ENV_FILE" <<ENV
 NODE_ENV=production
 PORT=3000
 HOSTNAME=0.0.0.0
@@ -67,7 +69,32 @@ MIDDAY_ENCRYPTION_KEY=
 REDIS_URL=redis://localhost:6379
 REDIS_QUEUE_URL=redis://localhost:6379
 ENV
+  fi
+  upsert_env_var NODE_ENV production
+  upsert_env_var PORT 3000
+  upsert_env_var HOSTNAME 0.0.0.0
+  upsert_env_var NEXT_PUBLIC_URL "$PUBLIC_URL"
+  upsert_env_var NEXT_PUBLIC_API_URL "$API_URL"
+  upsert_env_var NEXT_PUBLIC_MIMIR_API_URL "$MIMIR_API_URL"
   chmod 600 "$ENV_FILE"
+}
+
+upsert_env_var() {
+  local key="$1"
+  local value="$2"
+  if grep -q "^$key=" "$ENV_FILE"; then
+    sed -i "s|^$key=.*|$key=$value|" "$ENV_FILE"
+  else
+    printf '%s=%s\n' "$key" "$value" >>"$ENV_FILE"
+  fi
+}
+
+ensure_valsoft_data() {
+  if [ ! -f "$VALSOFT_DIR/data/transactions.csv" ]; then
+    log "Missing API input data: $VALSOFT_DIR/data/transactions.csv"
+    exit 1
+  fi
+  mkdir -p "$VALSOFT_DIR/output"
 }
 
 main() {
@@ -83,12 +110,43 @@ main() {
   ensure_docker
   ensure_docker_running
   write_default_env
+  ensure_valsoft_data
 
   cd "$SRC_DIR"
   if [ -n "${GITHUB_SHA:-}" ]; then
     printf '%s\n' "$GITHUB_SHA" > .git-commit-sha
   elif [ ! -f .git-commit-sha ]; then
     printf 'remote\n' > .git-commit-sha
+  fi
+
+  log "Building $API_IMAGE_TAG on $(hostname)"
+  docker build \
+    --file src/mimir-fraud/Dockerfile \
+    --tag "$API_IMAGE_TAG" \
+    .
+
+  log "Replacing $API_CONTAINER_NAME"
+  docker rm -f "$API_CONTAINER_NAME" >/dev/null 2>&1 || true
+  docker run -d \
+    --name "$API_CONTAINER_NAME" \
+    --restart unless-stopped \
+    -v "$VALSOFT_DIR/data:/data:ro" \
+    -v "$VALSOFT_DIR/output:/output" \
+    -p "$API_PUBLIC_PORT:$API_INTERNAL_PORT" \
+    "$API_IMAGE_TAG" >/dev/null
+
+  log "Waiting for API health check"
+  for _ in $(seq 1 60); do
+    if curl -fsS "http://127.0.0.1:$API_PUBLIC_PORT/health" >/dev/null 2>&1; then
+      log "API healthy"
+      break
+    fi
+    sleep 2
+  done
+  if ! curl -fsS "http://127.0.0.1:$API_PUBLIC_PORT/health" >/dev/null 2>&1; then
+    log "API did not become healthy; recent logs follow"
+    docker logs --tail=120 "$API_CONTAINER_NAME" || true
+    exit 1
   fi
 
   log "Building $IMAGE_TAG on $(hostname)"
@@ -146,9 +204,10 @@ main() {
     -p "$PUBLIC_PORT:$INTERNAL_PORT" \
     "$IMAGE_TAG" >/dev/null
 
-  log "Waiting for health check"
+  log "Waiting for dashboard health check"
   for _ in $(seq 1 30); do
     if curl -fsS "http://127.0.0.1:$PUBLIC_PORT/api/health" >/dev/null 2>&1 || curl -fsS "http://127.0.0.1:$PUBLIC_PORT/" >/dev/null 2>&1; then
+      log "Dashboard healthy"
       log "Deployment healthy"
       exit 0
     fi

@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/deploy-vultr.yml"
       - "mimir/**"
+      - "valsoft/**"
   workflow_dispatch:
 
 concurrency:
@@ -17,8 +18,10 @@ env:
   VULTR_HOST: ${{ vars.VULTR_HOST || '173.199.93.71' }}
   VULTR_USER: ${{ vars.VULTR_USER || 'root' }}
   REMOTE_SRC_DIR: /opt/mimir-src
+  REMOTE_VALSOFT_DIR: /opt/mimir/valsoft
   PUBLIC_URL: ${{ vars.NEXT_PUBLIC_URL || 'http://173.199.93.71' }}
   API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'http://173.199.93.71' }}
+  MIMIR_API_URL: ${{ vars.NEXT_PUBLIC_MIMIR_API_URL || 'http://173.199.93.71:8787' }}
 
 jobs:
   deploy:
@@ -57,6 +60,10 @@ jobs:
             --exclude 'output/playwright' \
             -e "ssh -i ~/.ssh/vultr_deploy_key" \
             mimir/ "$VULTR_USER@$VULTR_HOST:$REMOTE_SRC_DIR/"
+          ssh -i ~/.ssh/vultr_deploy_key "$VULTR_USER@$VULTR_HOST" "mkdir -p '$REMOTE_VALSOFT_DIR/data' '$REMOTE_VALSOFT_DIR/output'"
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/vultr_deploy_key" \
+            valsoft/data/ "$VULTR_USER@$VULTR_HOST:$REMOTE_VALSOFT_DIR/data/"
 
       - name: Upload runtime env from secret
         env:
@@ -73,19 +80,17 @@ jobs:
       - name: Remote build and deploy on Vultr
         env:
           NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
-          MIMIR_API_URL: ${{ vars.NEXT_PUBLIC_MIMIR_API_URL }}
         run: |
           if [ -z "$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY" ]; then
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(openssl rand -base64 32)"
-          fi
-          if [ -z "$MIMIR_API_URL" ]; then
-            MIMIR_API_URL="$API_URL"
           fi
 
           ssh -i ~/.ssh/vultr_deploy_key "$VULTR_USER@$VULTR_HOST" \
             "chmod +x '$REMOTE_SRC_DIR/deploy/vultr/build-and-deploy-dashboard.sh' && \
              SRC_DIR='$REMOTE_SRC_DIR' \
+             VALSOFT_DIR='$REMOTE_VALSOFT_DIR' \
              IMAGE_TAG='mimir-dashboard:$GITHUB_SHA' \
+             API_IMAGE_TAG='mimir-api:$GITHUB_SHA' \
              GITHUB_SHA='$GITHUB_SHA' \
              PUBLIC_URL='$PUBLIC_URL' \
              API_URL='$API_URL' \

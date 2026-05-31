@@ -20,7 +20,9 @@ Useful GitHub variables:
 - `VULTR_USER`: defaults to `root`.
 - `NEXT_PUBLIC_URL`: defaults to `http://173.199.93.71`.
 - `NEXT_PUBLIC_API_URL`: defaults to `http://173.199.93.71`.
+- `NEXT_PUBLIC_MIMIR_API_URL`: defaults to `http://173.199.93.71:8787`.
 
 The server-side deploy script creates `/opt/mimir/dashboard.env` with minimal placeholder values if the file does not already exist. That is enough to start the container, but production integrations need real values.
+The fraud API is deployed as a separate `mimir-api` container on port `8787`. CI syncs `valsoft/data` to `/opt/mimir/valsoft/data` and preserves `/opt/mimir/valsoft/output` across deploys for review state and audit output.
 
-The remote source lives at `/opt/mimir-src`. The deployed container is `mimir-dashboard`, bound to host port `80`.
+The remote source lives at `/opt/mimir-src`. The deployed containers are `mimir-api`, bound to host port `8787`, and `mimir-dashboard`, bound to host port `80`.
