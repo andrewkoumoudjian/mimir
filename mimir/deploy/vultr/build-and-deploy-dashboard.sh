@@ -7,6 +7,7 @@ CONTAINER_NAME="${CONTAINER_NAME:-mimir-dashboard}"
 IMAGE_TAG="${IMAGE_TAG:-mimir-dashboard:${GITHUB_SHA:-remote}}"
 API_CONTAINER_NAME="${API_CONTAINER_NAME:-mimir-api}"
 API_IMAGE_TAG="${API_IMAGE_TAG:-mimir-api:${GITHUB_SHA:-remote}}"
+NETWORK_NAME="${NETWORK_NAME:-mimir-net}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/dashboard.env}"
 VALSOFT_DIR="${VALSOFT_DIR:-$APP_DIR/valsoft}"
 PUBLIC_PORT="${PUBLIC_PORT:-80}"
@@ -15,7 +16,8 @@ API_PUBLIC_PORT="${API_PUBLIC_PORT:-8787}"
 API_INTERNAL_PORT="${API_INTERNAL_PORT:-8787}"
 PUBLIC_URL="${PUBLIC_URL:-http://173.199.93.71}"
 API_URL="${API_URL:-$PUBLIC_URL}"
-MIMIR_API_URL="${MIMIR_API_URL:-http://173.199.93.71:8787}"
+MIMIR_PUBLIC_API_URL="${MIMIR_PUBLIC_API_URL:-${MIMIR_API_URL:-http://173.199.93.71:8787}}"
+MIMIR_INTERNAL_API_URL="${MIMIR_INTERNAL_API_URL:-http://$API_CONTAINER_NAME:$API_INTERNAL_PORT}"
 NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-$(openssl rand -base64 32)}"
 
 log() {
@@ -47,6 +49,10 @@ ensure_docker_running() {
   fi
 }
 
+ensure_network() {
+  docker network inspect "$NETWORK_NAME" >/dev/null 2>&1 || docker network create "$NETWORK_NAME" >/dev/null
+}
+
 write_default_env() {
   mkdir -p "$APP_DIR" "$VALSOFT_DIR/data" "$VALSOFT_DIR/output"
   if [ ! -f "$ENV_FILE" ]; then
@@ -57,7 +63,8 @@ PORT=3000
 HOSTNAME=0.0.0.0
 NEXT_PUBLIC_URL=$PUBLIC_URL
 NEXT_PUBLIC_API_URL=$API_URL
-NEXT_PUBLIC_MIMIR_API_URL=$MIMIR_API_URL
+NEXT_PUBLIC_MIMIR_API_URL=$MIMIR_PUBLIC_API_URL
+MIMIR_API_URL=$MIMIR_INTERNAL_API_URL
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=placeholder
 NEXT_PUBLIC_SUPABASE_ID=local
@@ -75,7 +82,8 @@ ENV
   upsert_env_var HOSTNAME 0.0.0.0
   upsert_env_var NEXT_PUBLIC_URL "$PUBLIC_URL"
   upsert_env_var NEXT_PUBLIC_API_URL "$API_URL"
-  upsert_env_var NEXT_PUBLIC_MIMIR_API_URL "$MIMIR_API_URL"
+  upsert_env_var NEXT_PUBLIC_MIMIR_API_URL "$MIMIR_PUBLIC_API_URL"
+  upsert_env_var MIMIR_API_URL "$MIMIR_INTERNAL_API_URL"
   chmod 600 "$ENV_FILE"
 }
 
@@ -109,6 +117,7 @@ main() {
 
   ensure_docker
   ensure_docker_running
+  ensure_network
   write_default_env
   ensure_valsoft_data
 
@@ -130,6 +139,7 @@ main() {
   docker run -d \
     --name "$API_CONTAINER_NAME" \
     --restart unless-stopped \
+    --network "$NETWORK_NAME" \
     -v "$VALSOFT_DIR/data:/data:ro" \
     -v "$VALSOFT_DIR/output:/output" \
     -p "$API_PUBLIC_PORT:$API_INTERNAL_PORT" \
@@ -174,7 +184,7 @@ main() {
     --tag "$IMAGE_TAG" \
     --build-arg NEXT_PUBLIC_URL="$PUBLIC_URL" \
     --build-arg NEXT_PUBLIC_API_URL="$API_URL" \
-    --build-arg NEXT_PUBLIC_MIMIR_API_URL="$MIMIR_API_URL" \
+    --build-arg NEXT_PUBLIC_MIMIR_API_URL="$MIMIR_PUBLIC_API_URL" \
     --build-arg NEXT_PUBLIC_SUPABASE_URL \
     --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
     --build-arg NEXT_PUBLIC_SUPABASE_ID \
@@ -200,6 +210,7 @@ main() {
   docker run -d \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
+    --network "$NETWORK_NAME" \
     --env-file "$ENV_FILE" \
     -p "$PUBLIC_PORT:$INTERNAL_PORT" \
     "$IMAGE_TAG" >/dev/null

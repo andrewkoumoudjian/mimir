@@ -92,9 +92,12 @@ type MimirAuditEvent = {
 };
 
 export function getMimirApiBaseUrl() {
+	if (typeof window === "undefined" && process.env.MIMIR_API_URL) {
+		return process.env.MIMIR_API_URL.replace(/\/$/, "");
+	}
+
 	return (
 		process.env.NEXT_PUBLIC_MIMIR_API_URL ||
-		process.env.MIMIR_API_URL ||
 		process.env.NEXT_PUBLIC_API_URL ||
 		DEFAULT_API_URL
 	).replace(/\/$/, "");
