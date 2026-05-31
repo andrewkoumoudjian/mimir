@@ -14,11 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VULTR_HOST: ${{ vars.VULTR_HOST || '216.128.154.247' }}
+  VULTR_HOST: ${{ vars.VULTR_HOST || '173.199.93.71' }}
   VULTR_USER: ${{ vars.VULTR_USER || 'root' }}
   REMOTE_SRC_DIR: /opt/mimir-src
-  PUBLIC_URL: ${{ vars.NEXT_PUBLIC_URL || 'http://216.128.154.247' }}
-  API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'http://216.128.154.247' }}
+  PUBLIC_URL: ${{ vars.NEXT_PUBLIC_URL || 'http://173.199.93.71' }}
+  API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'http://173.199.93.71' }}
 
 jobs:
   deploy:

@@ -16,10 +16,10 @@ Recommended GitHub secrets:
 
 Useful GitHub variables:
 
-- `VULTR_HOST`: defaults to `216.128.154.247`.
+- `VULTR_HOST`: defaults to `173.199.93.71`.
 - `VULTR_USER`: defaults to `root`.
-- `NEXT_PUBLIC_URL`: defaults to `http://216.128.154.247`.
-- `NEXT_PUBLIC_API_URL`: defaults to `http://216.128.154.247`.
+- `NEXT_PUBLIC_URL`: defaults to `http://173.199.93.71`.
+- `NEXT_PUBLIC_API_URL`: defaults to `http://173.199.93.71`.
 
 The server-side deploy script creates `/opt/mimir/dashboard.env` with minimal placeholder values if the file does not already exist. That is enough to start the container, but production integrations need real values.
 
