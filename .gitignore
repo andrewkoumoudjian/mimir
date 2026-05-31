@@ -43,5 +43,7 @@ build/
 .playwright-cli/
 *.tsbuildinfo
 
-# Generated project outputs
-valsoft/output/
+# Local reference source drops
+ref/
+
+# Challenge outputs are committed when needed.
