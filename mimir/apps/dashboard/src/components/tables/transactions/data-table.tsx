@@ -279,7 +279,7 @@ export function DataTable({ initialSettings, initialTab }: Props) {
 	const copyUrl = useCallback((id: string) => {
 		try {
 			window.navigator.clipboard.writeText(
-				`${process.env.NEXT_PUBLIC_URL}/transactions/?transactionId=${id}`,
+				`${process.env.NEXT_PUBLIC_URL}/transactions?tab=review&transactionId=${id}`,
 			);
 
 			toast({

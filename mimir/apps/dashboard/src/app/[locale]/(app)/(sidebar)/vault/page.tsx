@@ -188,7 +188,7 @@ export default async function AuditTrailPage() {
 												<Link
 													href={
 														event.metadata.transactionId
-															? `/transactions?transactionId=${event.metadata.transactionId}`
+															? `/transactions?tab=review&transactionId=${event.metadata.transactionId}`
 															: "/transactions"
 													}
 												>

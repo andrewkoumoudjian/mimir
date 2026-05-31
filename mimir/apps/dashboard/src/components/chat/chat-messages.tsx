@@ -10,7 +10,6 @@ import { useDocumentParams } from "@/hooks/use-document-params";
 import { useInboxParams } from "@/hooks/use-inbox-params";
 import { useInvoiceParams } from "@/hooks/use-invoice-params";
 import { useTrackerParams } from "@/hooks/use-tracker-params";
-import { useTransactionParams } from "@/hooks/use-transaction-params";
 import { useChatToolInvalidation } from "./chat-invalidation";
 import {
   extractInvoiceData,
@@ -173,7 +172,6 @@ export function ChatMessages({
 }: ChatMessagesProps) {
   useChatToolInvalidation(messages);
 
-  const { setParams: setTransactionParams } = useTransactionParams();
   const { setParams: setInvoiceParams } = useInvoiceParams();
   const { setParams: setCustomerParams } = useCustomerParams();
   const { setParams: setTrackerParams } = useTrackerParams();
@@ -182,41 +180,54 @@ export function ChatMessages({
   const { setParams: setConnectParams } = useConnectParams();
   const router = useRouter();
 
-  const handleEntityLink = useCallback((href: string) => {
-    if (href === "#connect:bank") {
-      setConnectParams({ step: "connect" });
-      return true;
-    }
-    if (href.startsWith("#navigate:")) {
-      router.push(href.slice(10));
-      return true;
-    }
-    if (href.startsWith("#txn:")) {
-      setTransactionParams({ transactionId: href.slice(5) });
-      return true;
-    }
-    if (href.startsWith("#inv:")) {
-      setInvoiceParams({ invoiceId: href.slice(5), invoiceType: "details" });
-      return true;
-    }
-    if (href.startsWith("#cust:")) {
-      setCustomerParams({ customerId: href.slice(6), details: true });
-      return true;
-    }
-    if (href.startsWith("#project:")) {
-      setTrackerParams({ projectId: href.slice(9), update: true });
-      return true;
-    }
-    if (href.startsWith("#inbox:")) {
-      setInboxParams({ inboxId: href.slice(7), inboxType: "details" });
-      return true;
-    }
-    if (href.startsWith("#doc:")) {
-      setDocumentParams({ documentId: href.slice(5) });
-      return true;
-    }
-    return false;
-  }, []);
+  const handleEntityLink = useCallback(
+    (href: string) => {
+      if (href === "#connect:bank") {
+        setConnectParams({ step: "connect" });
+        return true;
+      }
+      if (href.startsWith("#navigate:")) {
+        router.push(href.slice(10));
+        return true;
+      }
+      if (href.startsWith("#txn:")) {
+        router.push(
+          `/transactions?tab=review&transactionId=${encodeURIComponent(href.slice(5))}`,
+        );
+        return true;
+      }
+      if (href.startsWith("#inv:")) {
+        setInvoiceParams({ invoiceId: href.slice(5), invoiceType: "details" });
+        return true;
+      }
+      if (href.startsWith("#cust:")) {
+        setCustomerParams({ customerId: href.slice(6), details: true });
+        return true;
+      }
+      if (href.startsWith("#project:")) {
+        setTrackerParams({ projectId: href.slice(9), update: true });
+        return true;
+      }
+      if (href.startsWith("#inbox:")) {
+        setInboxParams({ inboxId: href.slice(7), inboxType: "details" });
+        return true;
+      }
+      if (href.startsWith("#doc:")) {
+        setDocumentParams({ documentId: href.slice(5) });
+        return true;
+      }
+      return false;
+    },
+    [
+      router,
+      setConnectParams,
+      setCustomerParams,
+      setDocumentParams,
+      setInboxParams,
+      setInvoiceParams,
+      setTrackerParams,
+    ],
+  );
 
   const components = useMemo(
     () => makeStreamdownComponents(handleEntityLink),

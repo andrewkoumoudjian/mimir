@@ -901,7 +901,7 @@ export async function globalSearch(input: { searchTerm?: string }) {
 			currency: transaction.currency,
 			date: transaction.date,
 			status: transaction.review.status,
-			url: `/transactions?transactionId=${transaction.id}`,
+			url: `/transactions?tab=review&transactionId=${transaction.id}`,
 		},
 	}));
 }
