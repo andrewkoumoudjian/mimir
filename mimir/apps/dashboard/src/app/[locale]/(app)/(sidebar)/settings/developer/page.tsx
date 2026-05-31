@@ -1,37 +1,69 @@
+import { Badge } from "@midday/ui/badge";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@midday/ui/card";
 import type { Metadata } from "next";
-import { CreateApiKeyModal } from "@/components/modals/create-api-key-modal";
-import { DeleteApiKeyModal } from "@/components/modals/delete-api-key-modal";
-import { EditApiKeyModal } from "@/components/modals/edit-api-key-modal";
-import { OAuthSecretModal } from "@/components/modals/oauth-secret-modal";
-import { OAuthApplicationCreateSheet } from "@/components/sheets/oauth-application-create-sheet";
-import { OAuthApplicationEditSheet } from "@/components/sheets/oauth-application-edit-sheet";
-import { DataTable } from "@/components/tables/api-keys";
-import { OAuthDataTable } from "@/components/tables/oauth-applications";
-import { batchPrefetch, trpc } from "@/trpc/server";
+import { getMimirApiBaseUrl } from "@/lib/mimir/client";
 
 export const metadata: Metadata = {
-  title: "Developer | Midday",
+	title: "API Contract | Mimir",
 };
 
-export default async function Page() {
-  batchPrefetch([
-    trpc.apiKeys.get.queryOptions(),
-    trpc.oauthApplications.list.queryOptions(),
-  ]);
+const endpoints = [
+	["GET", "/summary", "Command center metrics and output files."],
+	["GET", "/transactions", "Scored rows with filters and review state."],
+	["GET", "/transactions/:id/context", "Evidence, card timeline, and graph."],
+	["POST", "/review/:id", "Approve, dismiss, or escalate a flag."],
+	["POST", "/review/undo", "Undo the latest reviewer action."],
+	["GET", "/notifications", "Live feed events."],
+] as const;
 
-  return (
-    <>
-      <div className="space-y-12">
-        <DataTable />
-        <OAuthDataTable />
-      </div>
+export default function ApiContractPage() {
+	return (
+		<div className="space-y-12">
+			<Card>
+				<CardHeader>
+					<CardTitle>API contract</CardTitle>
+					<CardDescription>
+						The dashboard uses the local Mimir API for scoring, explanations,
+						review actions, undo, artifacts, and live feed events.
+					</CardDescription>
+				</CardHeader>
 
-      <EditApiKeyModal />
-      <DeleteApiKeyModal />
-      <CreateApiKeyModal />
-      <OAuthSecretModal />
-      <OAuthApplicationCreateSheet />
-      <OAuthApplicationEditSheet />
-    </>
-  );
+				<CardContent>
+					<div className="font-mono text-sm">{getMimirApiBaseUrl()}</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Endpoints</CardTitle>
+					<CardDescription>
+						Backend surfaces exercised by the fraud command center.
+					</CardDescription>
+				</CardHeader>
+
+				<CardContent className="space-y-4">
+					{endpoints.map(([method, path, purpose]) => (
+						<div
+							key={`${method}-${path}`}
+							className="grid grid-cols-[72px_1fr] gap-3 text-sm"
+						>
+							<Badge variant="tag-rounded" className="w-fit">
+								{method}
+							</Badge>
+							<div className="min-w-0">
+								<div className="font-mono text-xs">{path}</div>
+								<div className="mt-1 text-muted-foreground">{purpose}</div>
+							</div>
+						</div>
+					))}
+				</CardContent>
+			</Card>
+		</div>
+	);
 }

@@ -11,6 +11,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from mimir.api.routes_review import apply_decision, undo_last
+from mimir.api.routes_synthetic import get_synthetic_live_feed
 from mimir.api.routes_transactions import (
     get_card_timeline,
     get_entity,
@@ -22,6 +23,7 @@ from mimir.api.routes_transactions import (
 )
 from mimir.core.paths import DEFAULT_OUTPUT_DIR, DEFAULT_TRANSACTION_CSV, ensure_output_dir
 from mimir.engine import run_fraud_engine
+from mimir.primitives.rust_backed import RustPrimitiveUnavailable
 from mimir.review.audit_log import read_audit_events
 from mimir.review.review_state import ReviewState
 from mimir.review.training_status import build_training_status
@@ -179,6 +181,27 @@ def make_handler(api: ReviewerApi):
                 events = [event.model_dump(mode="json") for event in read_audit_events(api.audit_log_path)]
                 self._send(events)
                 return
+            if parsed.path == "/synthetic/live":
+                try:
+                    self._send(
+                        get_synthetic_live_feed(
+                            input_path=api.input_path,
+                            output_dir=api.output_dir,
+                            profile=api.profile,
+                            cursor=_query_int(query, "cursor", 0),
+                            count=_query_int(query, "count", 3),
+                            false_positive_cost=api.false_positive_cost,
+                            false_negative_cost=api.false_negative_cost,
+                        )
+                    )
+                except RustPrimitiveUnavailable as exc:
+                    self._send(
+                        {"error": str(exc), "code": "synthetic_source_unavailable"},
+                        HTTPStatus.SERVICE_UNAVAILABLE,
+                    )
+                except Exception as exc:
+                    self._send({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
             self._send({"error": "Not found"}, HTTPStatus.NOT_FOUND)
 
         def do_POST(self) -> None:  # noqa: N802
@@ -222,7 +245,10 @@ def run_server(
     api = ReviewerApi(input_path=input_path, output_dir=output_dir, profile=profile)
     server = ThreadingHTTPServer((host, port), make_handler(api))
     print(f"Mimir reviewer API listening on http://{host}:{port}")
-    print("Endpoints: /summary, /queue, /transactions, /transactions/{id}/context, /graph, POST /review, POST /undo")
+    print(
+        "Endpoints: /summary, /queue, /transactions, /transactions/{id}/context, "
+        "/graph, /synthetic/live, POST /review, POST /undo"
+    )
     server.serve_forever()
 
 
@@ -231,6 +257,13 @@ def _query_float(query: dict[str, list[str]], key: str) -> float | None:
     if value in (None, ""):
         return None
     return float(value)
+
+
+def _query_int(query: dict[str, list[str]], key: str, default: int) -> int:
+    value = query.get(key, [None])[0]
+    if value in (None, ""):
+        return default
+    return int(value)
 
 
 def _json_safe(value: Any) -> Any:

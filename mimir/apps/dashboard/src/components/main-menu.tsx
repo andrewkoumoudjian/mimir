@@ -37,10 +37,6 @@ const items = [
 				name: "Merchant categories",
 			},
 			{
-				path: "/transactions?step=connect",
-				name: "Live source",
-			},
-			{
 				path: "/transactions?step=import&hide=true",
 				name: "Import CSV",
 			},
@@ -50,37 +46,27 @@ const items = [
 	{
 		path: "/inbox",
 		name: "Evidence",
-		children: [{ path: "/inbox/settings", name: "Settings" }],
+		children: [
+			{ path: "/inbox/live", name: "Synthetic stream" },
+			{ path: "/inbox/settings", name: "Feed settings" },
+		],
 	},
 	{
 		path: "/invoices",
 		name: "Exports",
-		children: [
-			{ path: "/invoices/products", name: "CSV artifacts" },
-			{ path: "/invoices?invoiceType=create", name: "Create report" },
-		],
+		children: [{ path: "/invoices/products", name: "CSV artifacts" }],
 	},
 	{
 		path: "/tracker",
 		name: "Hypotheses",
-		children: [{ path: "/tracker?create=true", name: "Log finding" }],
 	},
 	{
 		path: "/customers",
 		name: "Cards",
-		children: [{ path: "/customers?createCustomer=true", name: "Add card" }],
 	},
 	{
 		path: "/vault",
 		name: "Audit Trail",
-	},
-	{
-		path: "/apps",
-		name: "Apps",
-		children: [
-			{ path: "/apps", name: "All" },
-			{ path: "/apps?tab=installed", name: "Installed" },
-		],
 	},
 	{
 		path: "/settings",
@@ -89,9 +75,9 @@ const items = [
 			{ path: "/settings", name: "General" },
 			{ path: "/settings/billing", name: "Cost Controls" },
 			{ path: "/settings/accounts", name: "Data Sources" },
-			{ path: "/settings/members", name: "Members" },
-			{ path: "/settings/notifications", name: "Notifications" },
-			{ path: "/settings/developer", name: "Developer" },
+			{ path: "/settings/members", name: "Reviewer Roles" },
+			{ path: "/settings/notifications", name: "Alert Routing" },
+			{ path: "/settings/developer", name: "API Contract" },
 		],
 	},
 ];

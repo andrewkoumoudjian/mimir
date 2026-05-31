@@ -2,6 +2,7 @@ import type {
 	MiddayLikeTransaction,
 	MimirReviewerAction,
 	MimirSummary,
+	MimirSyntheticLiveFeed,
 	MimirTransactionContext,
 	MimirTransactionRisk,
 	PaginatedTransactions,
@@ -624,6 +625,24 @@ export async function fetchMimirTransactions() {
 export async function fetchMimirQueue() {
 	const transactions = await requestJson<MimirTransactionRisk[]>("/queue");
 	return transactions.map(mapTransactionRisk);
+}
+
+export async function fetchMimirSyntheticLiveFeed(input: {
+	cursor?: number;
+	count?: number;
+} = {}) {
+	const params = new URLSearchParams();
+	if (typeof input.cursor === "number") {
+		params.set("cursor", String(input.cursor));
+	}
+	if (typeof input.count === "number") {
+		params.set("count", String(input.count));
+	}
+
+	const query = params.toString();
+	return requestJson<MimirSyntheticLiveFeed>(
+		`/synthetic/live${query ? `?${query}` : ""}`,
+	);
 }
 
 export async function fetchMimirTransactionContext(transactionId: string) {

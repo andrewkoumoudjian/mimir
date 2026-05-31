@@ -69,6 +69,30 @@ export type MimirTransactionRisk = {
 	review: MimirTransactionReview;
 };
 
+export type MimirSyntheticLiveEvent = MimirTransactionRisk & {
+	arrival_index: number;
+	received_at: string;
+	source: string;
+	raw_transaction: Record<string, unknown>;
+};
+
+export type MimirSyntheticLiveFeed = {
+	source: string;
+	cursor: number;
+	next_cursor: number;
+	requested_count: number;
+	count: number;
+	generated_total: number;
+	profile?: Record<string, unknown>;
+	diagnostics?: {
+		processed_rows: number;
+		flagged_rows: number;
+		threshold: number;
+		model_version: string;
+	};
+	events: MimirSyntheticLiveEvent[];
+};
+
 export type MimirSummary = {
 	processed_rows: number;
 	flagged_rows: number;

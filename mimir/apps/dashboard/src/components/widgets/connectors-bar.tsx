@@ -3,8 +3,8 @@
 import { connectorApps, getConnectorLogoUrl } from "@midday/connectors";
 import { Icons } from "@midday/ui/icons";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ConnectorsModal } from "@/components/modals/connectors-modal";
 
 const DISPLAY_COUNT = 3;
 
@@ -52,7 +52,6 @@ const text = {
 };
 
 export function ConnectorsBar() {
-	const [open, setOpen] = useState(false);
 	const [displayed, setDisplayed] = useState<DisplayItem[] | null>(null);
 
 	useEffect(() => {
@@ -60,11 +59,9 @@ export function ConnectorsBar() {
 	}, []);
 
 	return (
-		<>
-			<div className="flex justify-end mt-1">
-				<motion.button
-					type="button"
-					onClick={() => setOpen(true)}
+		<div className="flex justify-end mt-1">
+			<Link href="/inbox/live" prefetch>
+				<motion.div
 					variants={container}
 					initial="hidden"
 					animate="show"
@@ -74,7 +71,7 @@ export function ConnectorsBar() {
 						variants={text}
 						className="inline-flex items-center gap-1 text-[11px] text-muted-foreground group-hover:text-foreground transition-colors"
 					>
-						Live feed active
+						Live feed
 						<Icons.ChevronRight size={11} />
 					</motion.span>
 					<div className="flex items-center -space-x-1.5">
@@ -92,10 +89,8 @@ export function ConnectorsBar() {
 							</motion.div>
 						))}
 					</div>
-				</motion.button>
-			</div>
-
-			<ConnectorsModal open={open} onOpenChange={setOpen} />
-		</>
+				</motion.div>
+			</Link>
+		</div>
 	);
 }

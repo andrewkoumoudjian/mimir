@@ -1,29 +1,147 @@
 # Hypothesis Log
 
+This log records the fraud theories used to build the Valsoft detector and whether each theory became part of the final Mimir scoring logic.
+
+---
+
+## Summary
+
+| ID | Hypothesis | Decision | Final signal |
+| --- | --- | --- | --- |
+| H1 | High-value gift cards and electronics are account-takeover cashout | Kept | `HIGH_RISK_CATEGORY_AMOUNT`, `REPEATED_HIGH_RISK_CARD_ACTIVITY`, `AMOUNT_SPIKE_FOR_CARD` |
+| H2 | Card testing appears as many tiny online transactions in a short window | Kept | `CARD_TESTING_VELOCITY` |
+| H3 | One fraud family requires cross-card aggregation | Kept | `MERCHANT_BURST`, shared device/IP, IP-prefix, xFraud graph score |
+| H4 | First-seen category, device, or IP is suspicious by itself | Partially rejected | Novelty retained but dampened unless paired with stronger evidence |
+| H5 | IsolationForest should drive the queue | Rejected as primary | Kept as `model_consensus` only |
+| H6 | xFraud can strengthen graph evidence without hidden labels | Kept with guardrails | `XFRAUD_GRAPH_SCORE` |
+| H7 | Review speed depends on entity context, not only rank | Kept | Context API, timeline, graph, related transactions |
+
 ## H1: High-value gift cards and electronics are account-takeover cashout
 
-Kept. Gift-card/electronics/travel transactions with high amount, new merchant/category/device, and repeated 24-hour activity are strong fraud candidates. This catches Apple Gift Card, Gift Card Mall, Apple Store, Newegg, Best Buy, and Air Canada patterns.
+Decision: kept.
+
+Logic: Fraudsters often convert card access into goods or stored value that can be resold quickly. In the dataset, gift card, electronics, and travel rows become much stronger when they also include amount spikes, new merchant or category behavior, new device/IP behavior, or repeated high-risk activity within 24 hours.
+
+Implemented as:
+
+- `HIGH_RISK_CATEGORY_AMOUNT`
+- `REPEATED_HIGH_RISK_CARD_ACTIVITY`
+- `AMOUNT_SPIKE_FOR_CARD`
+- `NEW_DEVICE_FOR_CARD`
+- `NEW_CATEGORY_FOR_CARD`
 
 ## H2: Card testing appears as many tiny online transactions in a short window
 
-Kept and promoted. The dataset contains dense low-dollar online bursts on a single card/device/IP. Temporal velocity now treats six or more small online transactions in 60 minutes as a high-priority signal.
+Decision: kept and promoted.
+
+Logic: A single low-dollar online transaction is often benign. Six or more small online transactions on the same card inside 60 minutes is a different pattern: it looks like credential/card testing before larger abuse.
+
+Implemented as:
+
+- `card_small_tx_count_60m`
+- `card_online_tx_count_60m`
+- `CARD_TESTING_VELOCITY`
+- A temporal score floor when both small-transaction and online velocity are high
 
 ## H3: One fraud family requires cross-card aggregation
 
-Kept. QuickPay Online bursts are much clearer when viewed as many unique cards hitting the same merchant within 60 minutes. Merchant unique-card windows and merchant burst score are part of the graph/collective layer.
+Decision: kept.
 
-## H4: First-seen category/device/IP is suspicious by itself
+Logic: Some suspicious merchants, devices, IPs, or IP prefixes are only suspicious when viewed across cards. The QuickPay-style burst pattern is weak from any single card's perspective but strong when many cards touch the same merchant inside the same window.
 
-Partially rejected. Pure novelty created false positives for low-value subscriptions and utilities. The score now dampens routine small recurring-service novelty unless there is a temporal, graph, or amount signal.
+Implemented as:
+
+- `merchant_unique_cards_60m`
+- `merchant_tx_count_60m`
+- `merchant_burst_score`
+- `unusual_merchant_hit_by_many_cards`
+- `shared_device_with_other_cards`
+- `shared_ip_with_other_cards`
+- `ip_prefix_unique_cards_60m`
+- xFraud graph edges across transaction, card, merchant, device, IP, and category-country nodes
+
+## H4: First-seen category, device, or IP is suspicious by itself
+
+Decision: partially rejected.
+
+Logic: Novelty is useful, but pure novelty over-flags normal life. Low-value subscriptions and utilities often look new without being fraudulent. Mimir keeps novelty signals but dampens routine low-value subscription and utility rows unless temporal, graph, or amount evidence also exists.
+
+Implemented as:
+
+- `NEW_DEVICE_FOR_CARD`
+- `NEW_IP_FOR_CARD`
+- `NEW_CATEGORY_FOR_CARD`
+- `NEW_MERCHANT_FOR_CARD`
+- Contextual score dampening for small benign-looking subscriptions and utilities
 
 ## H5: IsolationForest should drive the queue
 
-Rejected as primary evidence. It is useful as a weak consensus score but creates vague explanations if used alone. The final reasons always come from deterministic features.
+Decision: rejected as primary evidence.
+
+Logic: IsolationForest is good at finding unusual rows, but its explanations are too vague for this challenge. A reviewer should not be asked to trust "model says 0.91" without concrete evidence.
+
+Implemented as:
+
+- `model_consensus_score` as secondary evidence
+- Deterministic reason generation remains the source of reviewer-facing explanations
+- `ELEVATED_COMPOSITE_RISK` only appears when multiple weak signals combine
 
 ## H6: xFraud can strengthen graph evidence without hidden labels
 
-Kept with guardrails. The dataset has no ground-truth labels, so the Rust `xfraud_ml` layer trains only on pseudo-labels: reviewer escalations as positive, reviewer approvals/dismissals as negative, high-confidence deterministic flags as positive, and stable low-anomaly rows as negative. Ambiguous rows are scored but not used as training seeds. This makes `xfraud_graph_score` useful as graph evidence while keeping its label assumptions explicit in model metrics and reason evidence.
+Decision: kept with guardrails.
+
+Logic: The challenge provides no ground-truth labels, but graph structure still carries signal. Mimir trains the Rust-backed xFraud layer on explicit pseudo-labels and exposes those assumptions in metrics and reason evidence.
+
+Pseudo-label policy:
+
+- Reviewer declined or blocked rows are positive labels.
+- Reviewer escalated rows are weak positive labels.
+- Reviewer approved or dismissed rows are negative labels.
+- Without reviewer feedback, high-confidence deterministic fraud flags become positive labels.
+- Stable low-anomaly rows become negative labels.
+- Ambiguous rows are excluded from training seeds but still scored.
+
+Implemented as:
+
+- `xfraud_graph_score`
+- `XFRAUD_GRAPH_SCORE`
+- Training metrics and pseudo-label counts in `risk_results.json`
 
 ## H7: Review speed depends on entity context, not only rank
 
-Kept. A single suspicious transaction is easier to judge when the reviewer sees the card timeline, merchant/device/IP related transactions, and nearby flagged graph nodes. The JSON/API contract now exposes this context before the UI consumes it.
+Decision: kept.
+
+Logic: A reviewer can decide faster when a suspicious row is shown with card history, related merchant/device/IP activity, and graph neighborhood. This also helps explain cross-card fraud that a one-row view hides.
+
+Implemented as:
+
+- `GET /transactions/{id}/context`
+- `GET /entities/{type}/{id}`
+- `GET /cards/{card_id}/timeline`
+- `GET /graph?transaction_id=...`
+- Dashboard links from review rows into evidence and context views
+
+## Current results
+
+Balanced profile on the current challenge file:
+
+| Metric | Value |
+| --- | ---: |
+| Processed rows | 1,000 |
+| Flagged rows | 80 |
+| Review rate | 8% |
+| Critical rows | 7 |
+| High rows | 32 |
+| Medium rows | 77 |
+| Low rows | 884 |
+
+Flagged pattern mix:
+
+| Pattern | Flags |
+| --- | ---: |
+| Card testing | 39 |
+| Account takeover purchase | 16 |
+| Card baseline anomaly | 12 |
+| Elevated risk | 10 |
+| xFraud graph anomaly | 2 |
+| Merchant burst | 1 |
