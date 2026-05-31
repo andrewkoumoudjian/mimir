@@ -1,0 +1,114 @@
+{
+  "extends": "../../packages/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@api/*": ["../api/src/*"],
+      "@jobs/*": ["../../packages/jobs/src/*"],
+      "@midday/api/*": ["../api/src/*"],
+      "@midday/supabase/client": [
+        "./src/lib/midday-shims/supabase/client.ts"
+      ],
+      "@midday/supabase/server": [
+        "./src/lib/midday-shims/supabase/server.ts"
+      ],
+      "@midday/supabase/middleware": [
+        "./src/lib/midday-shims/supabase/middleware.ts"
+      ],
+      "@midday/supabase/cached-queries": [
+        "./src/lib/midday-shims/supabase/cached-queries.ts"
+      ],
+      "@midday/supabase/mutations": [
+        "./src/lib/midday-shims/supabase/mutations.ts"
+      ],
+      "@midday/supabase/storage": [
+        "./src/lib/midday-shims/supabase/storage.ts"
+      ],
+      "@midday/supabase/types": [
+        "./src/lib/midday-shims/supabase/types.ts"
+      ],
+      "@midday/events/client": ["./src/lib/midday-shims/events/client.tsx"],
+      "@midday/events/server": ["./src/lib/midday-shims/events/server.ts"],
+      "@midday/events/events": ["./src/lib/midday-shims/events/events.ts"],
+      "@midday/desktop-client/core": [
+        "./src/lib/midday-shims/desktop-client/core.ts"
+      ],
+      "@midday/desktop-client/platform": [
+        "./src/lib/midday-shims/desktop-client/platform.ts"
+      ],
+      "@midday/desktop-client/desktop-variants": [
+        "./src/lib/midday-shims/desktop-client/desktop-variants.ts"
+      ],
+      "@midday/documents/utils": [
+        "./src/lib/midday-shims/documents/utils.ts"
+      ],
+      "@midday/email/defaults": ["./src/lib/midday-shims/email/defaults.ts"],
+      "@midday/encryption": ["./src/lib/midday-shims/encryption.ts"],
+      "@midday/inbox": ["./src/lib/midday-shims/inbox.ts"],
+      "@midday/import": ["./src/lib/midday-shims/import.ts"],
+      "@midday/jobs/schema": ["./src/lib/midday-shims/jobs/schema.ts"],
+      "@midday/db/queries": ["./src/lib/midday-shims/db/queries.ts"],
+      "@midday/ui/cn": [
+        "../../packages/ui/src/utils/cn.ts"
+      ],
+      "@midday/ui/globals.css": [
+        "../../packages/ui/src/globals.css"
+      ],
+      "@midday/ui/hooks": [
+        "../../packages/ui/src/hooks/index.ts"
+      ],
+      "@midday/ui/tailwind.config": [
+        "../../packages/ui/tailwind.config.ts"
+      ],
+      "@midday/ui/editor/extentions/slash-command": [
+        "../../packages/ui/src/components/editor/extentions/slash-command/index.ts"
+      ],
+      "@midday/ui/*": [
+        "../../packages/ui/src/components/*"
+      ],
+      "@midday/utils": ["../../packages/utils/src/index.ts"],
+      "@midday/utils/*": ["../../packages/utils/src/*"],
+      "@midday/plans": ["../../packages/plans/src/index.ts"],
+      "@midday/location": ["../../packages/location/src/index.ts"],
+      "@midday/location/*": ["../../packages/location/src/*"],
+      "@midday/app-store": ["../../packages/app-store/src/index.ts"],
+      "@midday/app-store/*": ["../../packages/app-store/src/*"],
+      "@midday/connectors": ["../../packages/connectors/src/index.ts"],
+      "@midday/connectors/*": ["../../packages/connectors/src/*"],
+      "@midday/invoice": ["../../packages/invoice/src/index.tsx"],
+      "@midday/invoice/calculate": [
+        "../../packages/invoice/src/utils/calculate.ts"
+      ],
+      "@midday/invoice/currency": [
+        "../../packages/invoice/src/utils/currency.ts"
+      ],
+      "@midday/invoice/format-to-html": [
+        "../../packages/invoice/src/templates/html/format.tsx"
+      ],
+      "@midday/invoice/recurring": [
+        "../../packages/invoice/src/utils/recurring.ts"
+      ],
+      "@midday/invoice/templates/html": [
+        "../../packages/invoice/src/templates/html/index.tsx"
+      ],
+      "@midday/invoice/types": ["../../packages/invoice/src/types.ts"],
+      "@midday/invoice/utils": [
+        "../../packages/invoice/src/utils/transform.ts"
+      ]
+    },
+    "strict": true,
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "../../node_modules/@types"]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../../types",
+    "next-env.d.ts",
+    "next.config.js",
+    "next.config.mjs",
+    "tailwind.config.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}

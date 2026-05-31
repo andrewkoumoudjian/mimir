@@ -7,17 +7,18 @@ Mimir is a unified transaction intelligence platform. This build focuses first o
 From the repository root:
 
 ```bash
-python3.12 -m pip install -q maturin
-python3.12 -m pip install -e mimir/packages/mimir-core
-python3.12 -m pip install -e mimir/packages/xfraud-ml
-python3.12 -m pip install -e mimir/packages/synthetic-pipeline
+/Users/andrewkoumoudjian/.local/bin/uv venv --python 3.12 .venv
+/Users/andrewkoumoudjian/.local/bin/uv pip install --python .venv/bin/python "maturin>=1.7,<2" pytest
+env PATH="$HOME/.local/bin:$PATH" .venv/bin/maturin develop --uv --manifest-path mimir/packages/mimir-core/Cargo.toml
+env PATH="$HOME/.local/bin:$PATH" .venv/bin/maturin develop --uv --manifest-path mimir/packages/xfraud-ml/Cargo.toml
+env PATH="$HOME/.local/bin:$PATH" .venv/bin/maturin develop --uv --manifest-path mimir/packages/synthetic-pipeline/Cargo.toml
+/Users/andrewkoumoudjian/.local/bin/uv pip install --python .venv/bin/python -e mimir/src/mimir-fraud
 ```
 
 ## Run the detector
 
 ```bash
-PYTHONPATH=mimir/src/mimir-fraud/src \
-  python3.12 -m mimir.cli score \
+.venv/bin/python -m mimir.cli score \
   --input valsoft/data/transactions.csv \
   --output-dir valsoft/output \
   --profile balanced
@@ -34,13 +35,16 @@ Outputs:
 Reviewer commands:
 
 ```bash
-PYTHONPATH=mimir/src/mimir-fraud/src python3.12 -m mimir.cli queue
-PYTHONPATH=mimir/src/mimir-fraud/src python3.12 -m mimir.cli review tx_000985 --action escalate --note "Gift-card cashout"
-PYTHONPATH=mimir/src/mimir-fraud/src python3.12 -m mimir.cli undo
-PYTHONPATH=mimir/src/mimir-fraud/src python3.12 -m mimir.cli serve --port 8787
+.venv/bin/python -m mimir.cli next --status pending
+.venv/bin/python -m mimir.cli context tx_000985
+.venv/bin/python -m mimir.cli review tx_000985 --action escalate --note "Gift-card cashout"
+.venv/bin/python -m mimir.cli undo
+.venv/bin/python -m mimir.cli serve --port 8787
 ```
 
-API endpoints from `serve`: `GET /summary`, `GET /queue`, `GET /transactions`, `POST /review`, `POST /undo`.
+CLI commands emit JSON only for agent consumption. Review actions default to `agent_reviewer` and write `audit_log.jsonl`.
+
+API endpoints from `serve`: `GET /summary`, `GET /queue`, `GET /transactions`, `GET /transactions/{id}/context`, `GET /entities/{type}/{id}`, `GET /cards/{card_id}/timeline`, `GET /graph?transaction_id=...`, `GET /audit`, `POST /review`, `POST /undo`.
 
 ## Run the dashboard
 
@@ -52,7 +56,7 @@ npm install
 npm run dev -- --port 5173
 ```
 
-Open `http://127.0.0.1:5173/`. The dashboard uses Fragments UI for the app/sidebar shell and Base UI for the sidebar controls. Keyboard queue actions: arrow keys move, `A` approves, `D` dismisses, `E` escalates, and `U` undoes.
+Open `http://127.0.0.1:5173/`. The dashboard renders a one-at-a-time queue with approve, dismiss, escalate, undo, cost tuning, reasons, audit trail, graph highlighting, and a card timeline.
 
 ## Detection Strategy
 
@@ -62,11 +66,14 @@ Mimir uses a transparent layered anomaly engine:
 - Categorical surprisal: smoothed negative log probability for merchant/category/channel/country/device/IP behavior conditioned on the card.
 - Temporal velocity: 10-minute, 60-minute, and 24-hour windows for card testing, repeated high-risk purchases, split purchases, and merchant bursts.
 - Rust-backed graph/collective primitive: `mimir_core.TransactionProcessor` streams transactions in timestamp order and emits merchant, device, IP, IP-prefix, and rare-cluster signals.
+- xFraud graph score: `xfraud_ml` trains a small Rust-backed graph model over transaction-card-merchant-device-IP-cluster edges and writes `xfraud_graph_score` for every transaction.
 - Model consensus: deterministic IsolationForest percentile score as secondary evidence only.
 
 Default balanced mode flags the top 8% of transactions. Conservative and aggressive modes flag smaller or larger queues. Cost-aware tuning is available with `--false-positive-cost` and `--false-negative-cost`.
 
-The run summary also reports active Rust primitives: `mimir-core` for stream features, `xfraud-ml` for xFraud-style graph probes, and `synthetic-pipeline` for future live synthetic transaction sources.
+The xFraud training labels are pseudo-labels: reviewer escalations are positive, reviewer approvals/dismissals are negative, high-confidence deterministic fraud flags are positive, stable low-anomaly transactions are negative, and ambiguous rows are excluded from training but still scored. The run summary includes xFraud model metrics, and `XFRAUD_GRAPH_SCORE` reasons include pseudo-label evidence when that layer is a driver.
+
+The run summary also reports active Rust primitives: `mimir-core` for stream features, `xfraud-ml` for xFraud scoring and diagnostics, and `synthetic-pipeline` for future live synthetic transaction sources. Each transaction JSON includes root links to card, merchant, device, IP, and category/country cluster entities; context endpoints add related transactions, card timelines, and graph nodes/edges for reviewer highlighting.
 
 ## Current Results
 
@@ -75,7 +82,7 @@ Balanced profile on the provided dataset processes all 1,000 rows and flags 80 t
 ## Tests
 
 ```bash
-PYTHONPATH=mimir/src/mimir-fraud/src python3.12 -m pytest mimir/src/mimir-fraud/tests
+.venv/bin/python -m pytest mimir/src/mimir-fraud/tests
 cd mimir/mimir/app && npm run lint && npm run build
 ```
 

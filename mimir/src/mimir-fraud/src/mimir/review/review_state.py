@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from mimir.core.schemas import ReviewHistoryEvent, ReviewStatus, ReviewerAction, TransactionReview
+from mimir.core.schemas import Reason, ReviewHistoryEvent, ReviewStatus, ReviewerAction, TrainingLabel, TransactionReview
 from mimir.review.audit_log import append_audit_event
 
 
@@ -15,6 +16,16 @@ ACTION_TO_STATUS: dict[ReviewerAction, ReviewStatus] = {
     "approve": "approved",
     "dismiss": "dismissed",
     "escalate": "escalated",
+    "decline": "declined",
+    "block": "blocked",
+}
+
+ACTION_TO_TRAINING_LABEL: dict[ReviewerAction, TrainingLabel] = {
+    "approve": "negative",
+    "dismiss": "negative",
+    "escalate": "weak_positive",
+    "decline": "positive",
+    "block": "positive",
 }
 
 
@@ -42,8 +53,13 @@ class ReviewState(BaseModel):
         self,
         transaction_id: str,
         action: ReviewerAction,
-        reviewer: str = "local_reviewer",
+        reviewer: str = "agent_reviewer",
+        reviewer_confidence: float | None = None,
         note: str | None = None,
+        feature_snapshot: dict[str, Any] | None = None,
+        original_score: float | None = None,
+        original_reasons: list[Reason] | None = None,
+        model_version: str | None = None,
         audit_log_path: str | Path | None = None,
     ) -> ReviewHistoryEvent:
         current = self.reviews.get(transaction_id, TransactionReview())
@@ -54,7 +70,13 @@ class ReviewState(BaseModel):
             from_status=current.status,
             to_status=to_status,
             reviewer=reviewer,
+            reviewer_confidence=reviewer_confidence,
             note=note,
+            training_label=ACTION_TO_TRAINING_LABEL[action],
+            feature_snapshot=feature_snapshot or {},
+            original_score=original_score,
+            original_reasons=original_reasons or [],
+            model_version=model_version,
         )
         current.status = to_status
         current.history.append(event)
@@ -75,7 +97,13 @@ class ReviewState(BaseModel):
             from_status=current.status,
             to_status=last_event.from_status,
             reviewer=last_event.reviewer,
+            reviewer_confidence=last_event.reviewer_confidence,
             note=last_event.note,
+            training_label="unresolved",
+            feature_snapshot=last_event.feature_snapshot,
+            original_score=last_event.original_score,
+            original_reasons=last_event.original_reasons,
+            model_version=last_event.model_version,
         )
         current.status = last_event.from_status
         current.history.append(undo_event)

@@ -1,0 +1,113 @@
+name: Deploy dashboard to Vultr
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-vultr.yml"
+      - "mimir/**"
+  workflow_dispatch:
+
+concurrency:
+  group: vultr-dashboard-production
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: mimir-dashboard
+  VULTR_HOST: ${{ vars.VULTR_HOST || '216.128.154.247' }}
+  VULTR_USER: ${{ vars.VULTR_USER || 'root' }}
+  PUBLIC_URL: ${{ vars.NEXT_PUBLIC_URL || 'http://216.128.154.247' }}
+  API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'http://216.128.154.247' }}
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        run: |
+          test -n "${{ secrets.VULTR_SSH_PRIVATE_KEY }}" || {
+            echo "Missing GitHub secret VULTR_SSH_PRIVATE_KEY"
+            exit 1
+          }
+
+      - name: Prepare build metadata
+        working-directory: mimir
+        run: echo "$GITHUB_SHA" > .git-commit-sha
+
+      - name: Build dashboard image
+        working-directory: mimir
+        env:
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+          MIMIR_API_URL: ${{ vars.NEXT_PUBLIC_MIMIR_API_URL }}
+        run: |
+          if [ -z "$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY" ]; then
+            NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+          fi
+          if [ -z "$MIMIR_API_URL" ]; then
+            MIMIR_API_URL="$API_URL"
+          fi
+
+          docker build \
+            --file apps/dashboard/Dockerfile \
+            --tag "$IMAGE_NAME:$GITHUB_SHA" \
+            --build-arg NEXT_PUBLIC_URL="$PUBLIC_URL" \
+            --build-arg NEXT_PUBLIC_API_URL="$API_URL" \
+            --build-arg NEXT_PUBLIC_MIMIR_API_URL="$MIMIR_API_URL" \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL="${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321' }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder' }}" \
+            --build-arg NEXT_PUBLIC_SUPABASE_ID="${{ secrets.NEXT_PUBLIC_SUPABASE_ID || 'local' }}" \
+            --build-arg NEXT_PUBLIC_OPENPANEL_CLIENT_ID="${{ secrets.NEXT_PUBLIC_OPENPANEL_CLIENT_ID }}" \
+            --build-arg NEXT_PUBLIC_SENTRY_DSN="${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}" \
+            --build-arg NEXT_PUBLIC_PLAID_ENVIRONMENT="${{ vars.NEXT_PUBLIC_PLAID_ENVIRONMENT || 'sandbox' }}" \
+            --build-arg NEXT_PUBLIC_TELLER_APPLICATION_ID="${{ secrets.NEXT_PUBLIC_TELLER_APPLICATION_ID }}" \
+            --build-arg NEXT_PUBLIC_TELLER_ENVIRONMENT="${{ vars.NEXT_PUBLIC_TELLER_ENVIRONMENT || 'sandbox' }}" \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}" \
+            --build-arg NEXT_PUBLIC_GOOGLE_API_KEY="${{ secrets.NEXT_PUBLIC_GOOGLE_API_KEY }}" \
+            --build-arg NEXT_PUBLIC_DESKTOP_SCHEME="${{ vars.NEXT_PUBLIC_DESKTOP_SCHEME || 'midday' }}" \
+            --build-arg NEXT_PUBLIC_WHATSAPP_NUMBER="${{ vars.NEXT_PUBLIC_WHATSAPP_NUMBER }}" \
+            --build-arg NEXT_PUBLIC_TELEGRAM_BOT_USERNAME="${{ vars.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME }}" \
+            --build-arg NEXT_PUBLIC_SENDBLUE_NUMBER="${{ vars.NEXT_PUBLIC_SENDBLUE_NUMBER }}" \
+            --build-arg SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}" \
+            --build-arg SENTRY_ORG="${{ vars.SENTRY_ORG }}" \
+            --build-arg SENTRY_PROJECT="${{ vars.SENTRY_PROJECT }}" \
+            --build-arg NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY" \
+            .
+
+      - name: Export image archive
+        run: docker save "$IMAGE_NAME:$GITHUB_SHA" | gzip > /tmp/mimir-dashboard-image.tar.gz
+
+      - name: Prepare SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.VULTR_SSH_PRIVATE_KEY }}" > ~/.ssh/vultr_deploy_key
+          chmod 600 ~/.ssh/vultr_deploy_key
+          ssh-keyscan -H "$VULTR_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload deployment assets
+        run: |
+          scp -i ~/.ssh/vultr_deploy_key /tmp/mimir-dashboard-image.tar.gz "$VULTR_USER@$VULTR_HOST:/tmp/mimir-dashboard-image.tar.gz"
+          scp -i ~/.ssh/vultr_deploy_key mimir/deploy/vultr/deploy-dashboard.sh "$VULTR_USER@$VULTR_HOST:/tmp/deploy-dashboard.sh"
+
+      - name: Upload runtime env from secret
+        env:
+          DASHBOARD_ENV_FILE: ${{ secrets.DASHBOARD_ENV_FILE }}
+        run: |
+          if [ -z "$DASHBOARD_ENV_FILE" ]; then
+            echo "DASHBOARD_ENV_FILE not configured; server will keep or create /opt/mimir/dashboard.env"
+            exit 0
+          fi
+          printf '%s\n' "$DASHBOARD_ENV_FILE" > /tmp/dashboard.env
+          scp -i ~/.ssh/vultr_deploy_key /tmp/dashboard.env "$VULTR_USER@$VULTR_HOST:/tmp/dashboard.env"
+          ssh -i ~/.ssh/vultr_deploy_key "$VULTR_USER@$VULTR_HOST" 'mkdir -p /opt/mimir && install -m 600 /tmp/dashboard.env /opt/mimir/dashboard.env'
+
+      - name: Deploy on Vultr
+        run: |
+          ssh -i ~/.ssh/vultr_deploy_key "$VULTR_USER@$VULTR_HOST" \
+            "chmod +x /tmp/deploy-dashboard.sh && /tmp/deploy-dashboard.sh /tmp/mimir-dashboard-image.tar.gz '$IMAGE_NAME:$GITHUB_SHA'"

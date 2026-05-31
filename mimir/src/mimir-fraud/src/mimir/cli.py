@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from mimir.api.main import run_server
+from mimir.context import build_transaction_context
 from mimir.core.paths import DEFAULT_OUTPUT_DIR, DEFAULT_TRANSACTION_CSV, ensure_output_dir
 from mimir.engine import run_fraud_engine
 from mimir.review.review_state import ReviewState
@@ -50,6 +51,9 @@ def queue_command(args: argparse.Namespace) -> int:
         false_negative_cost=args.false_negative_cost,
         write_outputs=False,
     )
+    risks = [risk for risk in result.risks if risk.is_flagged]
+    if args.status:
+        risks = [risk for risk in risks if risk.review.status == args.status]
     rows = [
         {
             "rank": index + 1,
@@ -61,9 +65,42 @@ def queue_command(args: argparse.Namespace) -> int:
             "merchant": risk.merchant_name,
             "reason": risk.reasons[0].message if risk.reasons else "",
         }
-        for index, risk in enumerate([risk for risk in result.risks if risk.is_flagged])
+        for index, risk in enumerate(risks)
     ]
     print(json.dumps(rows, indent=2))
+    return 0
+
+
+def next_command(args: argparse.Namespace) -> int:
+    result = run_fraud_engine(
+        input_path=args.input,
+        output_dir=args.output_dir,
+        profile=args.profile,
+        review_rate=args.review_rate,
+        false_positive_cost=args.false_positive_cost,
+        false_negative_cost=args.false_negative_cost,
+        write_outputs=False,
+    )
+    candidate = next(
+        (risk for risk in result.risks if risk.is_flagged and risk.review.status == args.status),
+        None,
+    )
+    payload = {"ok": candidate is not None, "transaction": candidate.model_dump(mode="json") if candidate else None}
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+def context_command(args: argparse.Namespace) -> int:
+    result = run_fraud_engine(
+        input_path=args.input,
+        output_dir=args.output_dir,
+        profile=args.profile,
+        review_rate=args.review_rate,
+        false_positive_cost=args.false_positive_cost,
+        false_negative_cost=args.false_negative_cost,
+        write_outputs=False,
+    )
+    print(json.dumps(build_transaction_context(result, args.transaction_id), indent=2))
     return 0
 
 
@@ -76,6 +113,7 @@ def review_command(args: argparse.Namespace) -> int:
         args.transaction_id,
         args.action,
         reviewer=args.reviewer,
+        reviewer_confidence=args.reviewer_confidence,
         note=args.note,
         audit_log_path=audit_log_path,
     )
@@ -116,12 +154,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     queue_parser = subparsers.add_parser("queue", help="Print the current review queue as JSON")
     _add_common_score_args(queue_parser)
+    queue_parser.add_argument(
+        "--status",
+        default=None,
+        choices=["pending", "approved", "dismissed", "escalated", "declined", "blocked"],
+    )
     queue_parser.set_defaults(func=queue_command)
 
-    review_parser = subparsers.add_parser("review", help="Apply approve/dismiss/escalate to one transaction")
+    review_parser = subparsers.add_parser("review", help="Apply a reviewer decision to one transaction")
     review_parser.add_argument("transaction_id")
-    review_parser.add_argument("--action", required=True, choices=["approve", "dismiss", "escalate"])
-    review_parser.add_argument("--reviewer", default="local_reviewer")
+    review_parser.add_argument("--action", required=True, choices=["approve", "dismiss", "escalate", "decline", "block"])
+    review_parser.add_argument("--reviewer", default="agent_reviewer")
+    review_parser.add_argument("--reviewer-confidence", type=float, default=None)
     review_parser.add_argument("--note", default=None)
     review_parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     review_parser.set_defaults(func=review_command)
@@ -129,6 +173,20 @@ def build_parser() -> argparse.ArgumentParser:
     undo_parser = subparsers.add_parser("undo", help="Undo the last review action")
     undo_parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     undo_parser.set_defaults(func=undo_command)
+
+    next_parser = subparsers.add_parser("next", help="Print the next flagged transaction by review status")
+    _add_common_score_args(next_parser)
+    next_parser.add_argument(
+        "--status",
+        default="pending",
+        choices=["pending", "approved", "dismissed", "escalated", "declined", "blocked"],
+    )
+    next_parser.set_defaults(func=next_command)
+
+    context_parser = subparsers.add_parser("context", help="Print transaction entity context")
+    context_parser.add_argument("transaction_id")
+    _add_common_score_args(context_parser)
+    context_parser.set_defaults(func=context_command)
 
     serve_parser = subparsers.add_parser("serve", help="Run a local reviewer API")
     serve_parser.add_argument("--host", default="127.0.0.1")

@@ -22,6 +22,7 @@ def export_flagged_csv(
             "mimir_risk_score": risk.risk_score,
             "mimir_risk_level": risk.risk_level,
             "mimir_is_flagged": risk.is_flagged,
+            "mimir_xfraud_graph_score": risk.xfraud_graph_score,
             "mimir_recommended_action": risk.recommended_action,
             "mimir_primary_pattern": risk.primary_pattern,
             "mimir_reason_codes": ";".join(reason.code for reason in risk.reasons),

@@ -38,6 +38,10 @@ target/
 node_modules/
 dist/
 build/
+.next/
+.turbo/
+.playwright-cli/
+*.tsbuildinfo
 
 # Generated project outputs
 valsoft/output/

@@ -1,0 +1,12 @@
+{
+  "name": "@midday/api",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./trpc/routers/_app": "./src/trpc/routers/_app.ts",
+    "./utils/scopes": "./src/utils/scopes.ts"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

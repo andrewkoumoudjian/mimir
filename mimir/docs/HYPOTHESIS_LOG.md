@@ -19,3 +19,11 @@ Partially rejected. Pure novelty created false positives for low-value subscript
 ## H5: IsolationForest should drive the queue
 
 Rejected as primary evidence. It is useful as a weak consensus score but creates vague explanations if used alone. The final reasons always come from deterministic features.
+
+## H6: xFraud can strengthen graph evidence without hidden labels
+
+Kept with guardrails. The dataset has no ground-truth labels, so the Rust `xfraud_ml` layer trains only on pseudo-labels: reviewer escalations as positive, reviewer approvals/dismissals as negative, high-confidence deterministic flags as positive, and stable low-anomaly rows as negative. Ambiguous rows are scored but not used as training seeds. This makes `xfraud_graph_score` useful as graph evidence while keeping its label assumptions explicit in model metrics and reason evidence.
+
+## H7: Review speed depends on entity context, not only rank
+
+Kept. A single suspicious transaction is easier to judge when the reviewer sees the card timeline, merchant/device/IP related transactions, and nearby flagged graph nodes. The JSON/API contract now exposes this context before the UI consumes it.

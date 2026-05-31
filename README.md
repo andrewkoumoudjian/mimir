@@ -16,18 +16,17 @@ The active build is the Mimir fraud engine for the Valsoft transaction intellige
 Run the current fraud scoring flow from the repository root:
 
 ```bash
-PYTHONPATH=mimir/packages/mimir-fraud/src \
-  python3 -m mimir.cli score \
+.venv/bin/python -m mimir.cli score \
   --input valsoft/data/transactions.csv \
   --output-dir valsoft/output \
   --profile balanced
 ```
 
-See `mimir/README.md` for the fraud engine details, reviewer commands, API endpoints, package layout, and test commands.
+See `mimir/README.md` for Python 3.12/`maturin` setup, Rust package installation, fraud engine details, reviewer commands, context API endpoints, package layout, and test commands.
 
 ## Packages
 
-- `mimir/packages/mimir-fraud`: Python fraud and transaction risk engine.
+- `mimir/src/mimir-fraud`: Python fraud and transaction risk engine.
 - `mimir/packages/mimir-core`: Rust-backed shared primitives exposed to Python.
 - `mimir/packages/xfraud-ml`: pure-Rust xFraud-style ML and detector training stack.
 - `mimir/packages/synthetic-pipeline`: Rust-backed synthetic transaction generation experiments.

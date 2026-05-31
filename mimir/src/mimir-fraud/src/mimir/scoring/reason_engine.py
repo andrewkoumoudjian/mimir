@@ -291,6 +291,25 @@ def build_reasons(row: dict[str, Any], risk_score: float) -> list[Reason]:
             )
         )
 
+    xfraud_score = float(row.get("xfraud_graph_score") or 0.0)
+    if xfraud_score >= 0.72:
+        reasons.append(
+            _reason(
+                "XFRAUD_GRAPH_SCORE",
+                "high" if xfraud_score >= 0.85 else "medium",
+                f"xFraud graph model scored this transaction at {xfraud_score:.2f}.",
+                {
+                    "xfraud_graph_score": round(xfraud_score, 4),
+                    "pseudo_label": int(row.get("xfraud_pseudo_label") or -1),
+                    "pseudo_label_source": row.get("xfraud_label_source") or "unlabeled_scored",
+                    "training_seed_count": int(row.get("xfraud_training_seed_count") or 0),
+                    "validation_auc": round(float(row.get("xfraud_valid_auc") or 0.5), 4),
+                    "pseudo_label_policy": "reviewer feedback overrides high-confidence heuristic pseudo-labels",
+                },
+                50,
+            )
+        )
+
     if not reasons and risk_score >= 0.42:
         reasons.append(
             _reason(
@@ -320,6 +339,8 @@ def primary_pattern_from_reasons(reasons: list[Reason], row: dict[str, Any]) -> 
         return "account_takeover_purchase"
     if "SHARED_DEVICE_ACROSS_CARDS" in codes or "SHARED_IP_ACROSS_CARDS" in codes:
         return "shared_instrument"
+    if "XFRAUD_GRAPH_SCORE" in codes:
+        return "xfraud_graph_anomaly"
     if "AMOUNT_SPIKE_FOR_CARD" in codes:
         return "card_baseline_anomaly"
     if float(row.get("model_consensus_score") or 0.0) >= 0.90:

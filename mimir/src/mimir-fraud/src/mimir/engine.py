@@ -11,8 +11,9 @@ from mimir.export.export_csv import export_flagged_csv
 from mimir.export.export_json import export_review_queue_json, export_risk_json
 from mimir.features.feature_pipeline import build_feature_frame
 from mimir.primitives import primitive_runtime_status, xfraud_graph_probe
-from mimir.review.feedback import apply_feedback_suppression
+from mimir.review.feedback import apply_session_feedback_adjustments
 from mimir.review.review_state import ReviewState
+from mimir.review.training_status import build_training_status
 from mimir.scoring.score_engine import EngineResult, score_feature_frame
 
 
@@ -33,7 +34,8 @@ def run_fraud_engine(
     review_state = ReviewState.load(state_file)
 
     transactions = load_transactions(input_path)
-    features = build_feature_frame(transactions)
+    feature_result = build_feature_frame(transactions, review_status_by_transaction=review_state.reviews)
+    features = feature_result.frame
     result = score_feature_frame(
         features,
         profile=profile,
@@ -42,13 +44,22 @@ def run_fraud_engine(
         false_negative_cost=false_negative_cost,
         review_status_by_transaction=review_state.reviews,
     )
-    risks = apply_feedback_suppression(result.risks, review_state)
+    risks = apply_session_feedback_adjustments(result.risks, review_state, result.summary.threshold)
     result = EngineResult(feature_frame=result.feature_frame, risks=risks, summary=result.summary)
+    _refresh_summary_counts(result.summary, risks)
     primitive_status = primitive_runtime_status(str(input_path))
     try:
         primitive_status["xfraud_training"]["probe"] = xfraud_graph_probe(result.feature_frame)
     except Exception as exc:
         primitive_status["xfraud_training"]["probe_error"] = str(exc)
+    primitive_status["xfraud_training"].update(feature_result.diagnostics.get("xfraud_training", {}))
+    primitive_status["xfraud_training"].update(
+        build_training_status(
+            review_state,
+            xfraud_available=bool(primitive_status["xfraud_training"].get("available")),
+            current_model_version=result.summary.model_version,
+        )
+    )
     result.summary.primitive_status = primitive_status
 
     if write_outputs:
@@ -56,6 +67,18 @@ def run_fraud_engine(
         result.summary.output_files.update({key: str(value) for key, value in output_files.items()})
 
     return result
+
+
+def _refresh_summary_counts(summary: EngineSummary, risks) -> None:
+    summary.flagged_rows = sum(1 for risk in risks if risk.is_flagged)
+    risk_level_counts: dict[str, int] = {}
+    primary_pattern_counts: dict[str, int] = {}
+    for risk in risks:
+        risk_level_counts[risk.risk_level] = risk_level_counts.get(risk.risk_level, 0) + 1
+        if risk.is_flagged:
+            primary_pattern_counts[risk.primary_pattern] = primary_pattern_counts.get(risk.primary_pattern, 0) + 1
+    summary.risk_level_counts = risk_level_counts
+    summary.primary_pattern_counts = primary_pattern_counts
 
 
 def write_engine_outputs(

@@ -95,6 +95,7 @@ def _component_scores(row: dict[str, Any]) -> ComponentScores:
             (scale_above(float(row.get("ip_unique_cards_total") or 0), 1, 4), 0.7),
             (scale_above(float(row.get("ip_prefix_unique_cards_60m") or 0), 4, 10), 0.8),
             (1.0 if _as_bool(row.get("merchant_category_country_cluster_rarity")) and high_risk_category else 0.0, 0.9),
+            (float(row.get("xfraud_graph_score") or 0.0), 1.6),
         ]
     )
 
@@ -128,6 +129,59 @@ def _recommended_action(risk_level: str, is_flagged: bool) -> str:
     if is_flagged:
         return "review"
     return "monitor"
+
+
+def _entity_links_for_row(row: dict[str, Any]) -> list[dict[str, str]]:
+    transaction_id = str(row["transaction_id"])
+    links = [
+        {
+            "source_type": "transaction",
+            "source_id": transaction_id,
+            "target_type": "card",
+            "target_id": str(row["card_id"]),
+            "relation": "uses_card",
+            "label": f"card {row['card_id']}",
+        },
+        {
+            "source_type": "transaction",
+            "source_id": transaction_id,
+            "target_type": "merchant",
+            "target_id": str(row["merchant_name"]),
+            "relation": "paid_merchant",
+            "label": str(row["merchant_name"]),
+        },
+        {
+            "source_type": "transaction",
+            "source_id": transaction_id,
+            "target_type": "category_country_cluster",
+            "target_id": f"{row['merchant_category']}|{row['merchant_country']}",
+            "relation": "in_category_country_cluster",
+            "label": f"{row['merchant_category']}/{row['merchant_country']}",
+        },
+    ]
+    if row.get("device_id"):
+        links.append(
+            {
+                "source_type": "transaction",
+                "source_id": transaction_id,
+                "target_type": "device",
+                "target_id": str(row["device_id"]),
+                "relation": "used_device",
+                "label": f"device {row['device_id']}",
+            }
+        )
+    if row.get("ip_address"):
+        links.append(
+            {
+                "source_type": "transaction",
+                "source_id": transaction_id,
+                "target_type": "ip",
+                "target_id": str(row["ip_address"]),
+                "relation": "used_ip",
+                "label": f"IP {row['ip_address']}",
+            }
+        )
+    return links
 
 
 def _contextual_score_adjustment(row: dict[str, Any], risk_score: float) -> float:
@@ -209,6 +263,7 @@ def score_feature_frame(
                 merchant_country=str(row["merchant_country"]),
                 device_id=str(row.get("device_id") or "") or None,
                 ip_address=str(row.get("ip_address") or "") or None,
+                xfraud_graph_score=round(float(row.get("xfraud_graph_score") or 0.0), 4),
                 risk_score=risk_score,
                 risk_level=risk_level,  # type: ignore[arg-type]
                 is_flagged=is_flagged,
@@ -217,6 +272,7 @@ def score_feature_frame(
                 component_scores=row["component_scores"],
                 reasons=reasons,
                 review=review,
+                entity_links=_entity_links_for_row(row),
             )
         )
 
@@ -246,6 +302,7 @@ def score_feature_frame(
             "recommended_action": risk.recommended_action,
             "primary_pattern": risk.primary_pattern,
             "reason_codes": ";".join(reason.code for reason in risk.reasons),
+            "xfraud_graph_score": risk.xfraud_graph_score,
         }
         for risk in risks
     }
